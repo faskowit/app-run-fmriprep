@@ -133,7 +133,8 @@ if [[ ${inFMAP} != "null" ]] ; then
 	rawMagnitudes=($(ls -v ${inFMAP}/*magnitude*nii.gz))
 
 	cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
-	jq -r '.meta | .IntendedFor="'${name_FMRI}_bold.nii.gz'"' ${blJSON_FMAP} \
+	# replacing (or setting), the intended for category
+	jq -r '.meta | .IntendedFor="'${name_FMAP}_bold.nii.gz'"' ${blJSON_FMAP} \
 		> ${name_FMAP}_phasediff.json
 
 	for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do

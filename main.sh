@@ -16,6 +16,19 @@ inFMAP=`jq -r '.fmap' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
 
 ################################################################################
+# some logical checks
+
+if [[ ${inT1w} = "null" ]] ; then
+	echo "app needs minimally a T1w. exiting"
+	exit 1
+fi
+
+if [[ ${inFMAP} != "null" ]] && [[ ${inFMRI} = "null" ]] ; then
+	echo "need fmri for fmap. exiting"
+	exit 1
+fi
+
+################################################################################
 # extract info from brainlife interface, base on T1w
 
 # get the staging dir, this is where meta information is 
@@ -172,14 +185,17 @@ cmd="singularity run --cleanenv \
 		\
 		--fs-license-file=${FS_LICENSE} \
 		\
-		--work-dir=${PWD}/working/ \
+		--work-dir=${workdir} \
 		\
 		--participant_label=${bidsSub} \
 		\
-		${bidsDir} ${PWD}/output/fmripOut/ participant \
+		${bidsSubDir} ${PWD}/output/fmripOut/ participant \
     "
 eval $cmd
 
 #exit code from the last command (singularity) will be used.
 exit $?
 
+# fake input bids dir will be in ${PWD}/input/${bidsSub}/
+# fmriprep output will be in ${PWD}/output/fmripOut/
+# fmriprep work dir will be in ${PWD}/ouput/fmripworkdir/

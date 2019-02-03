@@ -114,13 +114,11 @@ fi
 ################################################################################
 # FMAP
 
-# TODO need to figure out if fieldmap reading is alright
-
 if [[ ${inFMAP} != "null" ]] ; then
 
 	mkdir -p ${bidsSubSesDir}/fmap/
-	#blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
-	blJSON_FMAP=${inFMAP}/.brainlife.json
+	blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+	#blJSON_FMAP=${inFMAP}/.brainlife.json
 	name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
 	name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAPI} "acq run" ${ses} )
 
@@ -129,8 +127,10 @@ if [[ ${inFMAP} != "null" ]] ; then
 	# phasediff.nii.gz, phasediff.json, 
 	# and magnitude files
 
-	rawPhaseDiff=${inFMAP}/phasediff.nii.gz
-	rawMagnitudes=($(ls -v ${inFMAP}/*magnitude*nii.gz))
+	fmapDir=$(dirname ${inFMAP})/
+
+	rawPhaseDiff=${fmapDir}/phasediff.nii.gz
+	rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
 
 	cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
 	# replacing (or setting), the intended for category

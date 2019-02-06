@@ -5,15 +5,61 @@
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
 
+TESTING="false"
+
 ################################################################################
 # read input from config.json
 # starting off with basic options here
 
-inT1w=`jq -r '.t1' config.json`
-inT2w=`jq -r '.t2' config.json`
-inFMRI=`jq -r '.fmri' config.json`
-inFMAP=`jq -r '.fmap' config.json`
-inFSDIR=`jq -r '.fsin' config.json`
+if [[ -f config.json ]] ; then
+	# roll with config.json
+	echo "reading config.json"
+
+	inT1w=`jq -r '.t1' config.json`
+	inT2w=`jq -r '.t2' config.json`
+	inFMRI=`jq -r '.fmri' config.json`
+	inFMAP=`jq -r '.fmap' config.json`
+	inFSDIR=`jq -r '.fsin' config.json`
+
+else
+	echo "reading command line args"
+
+	inT1w="null"
+	inT2w="null"
+	inFMRI="null"
+	inFMAP="null"
+	inFSDIR="null"
+
+	while [ "$1" != "" ]; do
+	    case $1 in
+	        -t1 | --t1w )           shift
+	                               	inT1w=$1
+	                               	;;
+	        -t2 | --t2w )    		shift
+									inT2w=$1
+	                                ;;
+	        -fmri | --func )    	shift
+									inFMRI=$1
+	                                ;;
+	        -fmap | --fieldmap )  	shift
+									inFMAP=$1
+	                                ;;
+	        -fs | --freesurfer )	shift
+									inFSDIR=$1
+	                                ;;
+	        -test )					# no shift needed here
+									TESTING="true"
+	                                ;;                  
+	        -h | --help )           echo "see script"
+	                                exit 1
+	                                ;;
+	        * )                     echo "see script"
+	                                exit 1
+	    esac
+	    shift
+	done
+
+fi
 
 ################################################################################
 # some logical checks
@@ -65,7 +111,7 @@ mkdir ${PWD}/ouput/
 
 # the bids dir will be inside ouf input
 bidsSubDir=${PWD}/input/${bidsSub}/
-bidsSubSesDir=${bidsSubDir}/${ses}/
+bidsSubSesDir=${bidsSubDir}/ses-${ses}/
 mkdir -p ${bidsSubSesDir}
 
 # working dir
@@ -191,7 +237,10 @@ cmd="singularity run --cleanenv \
 		\
 		${bidsSubDir} ${PWD}/output/fmripOut/ participant \
     "
-eval $cmd
+echo $cmd
+if [[ ${TESTING} = "false" ]] ; then
+	eval $cmd
+fi
 
 #exit code from the last command (singularity) will be used.
 exit $?

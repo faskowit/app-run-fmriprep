@@ -40,6 +40,8 @@ function bids_namekeyvals {
 
 # MIGHT NOT NEED THESE SPECIFIC FUNCS
 
+<<'NAH'
+
 function bids_anat_namekeyvals {
 
     # sub-<label>[_ses-<label>][_acq-<label>][_ce-<label>][_rec-<label>][_run-<index>]_<modality_label>.nii[.gz]
@@ -162,6 +164,7 @@ function bids_fmap_namekeyvals {
 
 }
 
+NAH
 
 function bids_short_to_fullname {
 

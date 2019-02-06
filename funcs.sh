@@ -1,5 +1,8 @@
 # helper functions
 
+#set -e
+#set -x
+
 function bids_namekeyvals {
 
 	local baseName=$1

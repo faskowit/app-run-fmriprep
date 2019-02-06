@@ -2,10 +2,14 @@
 #PBS -l nodes=1:ppn=8,walltime=24:00:00
 #PBS -N app-run-fmriprep
 
+#set -e
+#set -x
+
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
 
 TESTING="false"
+CMDLINESINGIMG=''
 
 ################################################################################
 # read input from config.json
@@ -32,21 +36,24 @@ else
 
 	while [ "$1" != "" ]; do
 	    case $1 in
-	        -t1 | --t1w )           shift
+	        -t1 | -t1w )           	shift
 	                               	inT1w=$1
 	                               	;;
-	        -t2 | --t2w )    		shift
+	        -t2 | -t2w )    		shift
 									inT2w=$1
 	                                ;;
-	        -fmri | --func )    	shift
+	        -fmri | -func )    		shift
 									inFMRI=$1
 	                                ;;
-	        -fmap | --fieldmap )  	shift
+	        -fmap | -fieldmap )  	shift
 									inFMAP=$1
 	                                ;;
-	        -fs | --freesurfer )	shift
+	        -fs | -freesurfer )		shift
 									inFSDIR=$1
 	                                ;;
+	        -img | -sing )			shift
+									CMDLINESINGIMG=$1
+	                                ;;	        
 	        -test )					# no shift needed here
 									TESTING="true"
 	                                ;;                  
@@ -110,7 +117,8 @@ mkdir ${PWD}/input/
 mkdir ${PWD}/ouput/
 
 # the bids dir will be inside ouf input
-bidsSubDir=${PWD}/input/${bidsSub}/
+bidsDir=${PWD}/input/
+bidsSubDir=${bidsDir}/${bidsSub}/
 bidsSubSesDir=${bidsSubDir}/ses-${ses}/
 mkdir -p ${bidsSubSesDir}
 
@@ -132,6 +140,15 @@ if [[ ${inFSDIR} != "null" ]] ; then
 		cp -v ${inFSDIR} ${outdir}/${bidsSub}/
 	fi
 fi
+
+# save a dataset description
+
+cat > ${bidsDir}/dataset_description.json << 'BIDSDESCRIPT'
+{
+    "Name": "temp",
+    "BIDSVersion": "1.0.0"
+}
+BIDSDESCRIPT
 
 ################################################################################
 # T1w 
@@ -179,7 +196,7 @@ if [[ ${inFMAP} != "null" ]] ; then
 	blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
 	#blJSON_FMAP=${inFMAP}/.brainlife.json
 	name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-	name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAPI} "acq run" ${ses} )
+	name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq run" ${ses} )
 
 	# fmap actually has a few things associated with it, hence need to copy 
 	# over additional stuff: fmap is actually:
@@ -195,6 +212,7 @@ if [[ ${inFMAP} != "null" ]] ; then
 	# replacing (or setting), the intended for category
 	jq -r '.meta | .IntendedFor="'${name_FMAP}_bold.nii.gz'"' ${blJSON_FMAP} \
 		> ${name_FMAP}_phasediff.json
+	echo ""
 
 	for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
 		curMag=${rawMagnitudes[${idx}]}
@@ -216,8 +234,14 @@ plugin: LegacyMultiProc
 plugin_args: {maxtasksperchild: 1, memory_gb: $(echo ${MEMGB}), n_procs: $(echo ${NPROC}), raise_insufficient: false}
 EOF
 
+if [[ -n ${CMDLINESINGIMG} ]] ; then
+	singIMG=${CMDLINESINGIMG}
+else
+	singIMG=docker://poldracklab/fmriprep:${FMRIPVER} 
+fi
+
 cmd="singularity run --cleanenv \
-		docker://poldracklab/fmriprep:${FMRIPVER} \
+		${singIMG} \
 		\
 		--notrack --resource-monitor --skip_bids_validation \
 		--use-plugin=${PWD}/multi_proc.yml \
@@ -235,7 +259,7 @@ cmd="singularity run --cleanenv \
 		\
 		--participant_label=${bidsSub} \
 		\
-		${bidsSubDir} ${PWD}/output/fmripOut/ participant \
+		${bidsDir} ${PWD}/output/fmripOut/ participant \
     "
 echo $cmd
 if [[ ${TESTING} = "false" ]] ; then

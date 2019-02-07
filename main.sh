@@ -8,8 +8,14 @@
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
 
-TESTING="false"
+TESTINGSCRIPT="false"
+TESTINGRUN="false"
 CMDLINESINGIMG=''
+
+FMRIPVER=1.2.6-1
+MEMGB=28
+NPROC=8
+OPENMPPROC=4
 
 ################################################################################
 # read input from config.json
@@ -38,25 +44,34 @@ else
 	    case $1 in
 	        -t1 | -t1w )           	shift
 	                               	inT1w=$1
+	                          		checkisfile $1
 	                               	;;
 	        -t2 | -t2w )    		shift
 									inT2w=$1
+									checkisfile $1
 	                                ;;
 	        -fmri | -func )    		shift
 									inFMRI=$1
+									checkisfile $1
 	                                ;;
 	        -fmap | -fieldmap )  	shift
 									inFMAP=$1
+									checkisfile $1
 	                                ;;
 	        -fs | -freesurfer )		shift
 									inFSDIR=$1
+									checkisdir $1
 	                                ;;
 	        -img | -sing )			shift
 									CMDLINESINGIMG=$1
+									checkisfile $1
 	                                ;;	        
-	        -test )					# no shift needed here
-									TESTING="true"
-	                                ;;                  
+	        -testscript )			# no shift needed here
+									TESTINGSCRIPT="true"
+	                                ;;
+	        -testrun )				# no shift needed here
+									TESTINGRUN="true"
+	                                ;;  	                        
 	        -h | --help )           echo "see script"
 	                                exit 1
 	                                ;;
@@ -112,9 +127,9 @@ fi
 # setup bids dir structure
 
 # clean
-rm -rf ${PWD}/input/ ${PWD}/ouput/
+rm -rf ${PWD}/input/ ${PWD}/output/
 mkdir ${PWD}/input/ 
-mkdir ${PWD}/ouput/
+mkdir ${PWD}/output/
 
 # the bids dir will be inside ouf input
 bidsDir=${PWD}/input/
@@ -123,11 +138,11 @@ bidsSubSesDir=${bidsSubDir}/ses-${ses}/
 mkdir -p ${bidsSubSesDir}
 
 # working dir
-workdir=${PWD}/ouput/fmripworkdir/
+workdir=${PWD}/output/fmripworkdir/
 mkdir -p ${workdir}
 
 # output dir
-outdir=${PWD}/ouput/fmripout/
+outdir=${PWD}/output/fmripout/
 mkdir ${outdir}
 
 # if freesurfer provided, copy it to the same level as output dir
@@ -208,9 +223,11 @@ if [[ ${inFMAP} != "null" ]] ; then
 	rawPhaseDiff=${fmapDir}/phasediff.nii.gz
 	rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
 
+	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,' )
+
 	cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
 	# replacing (or setting), the intended for category
-	jq -r '.meta | .IntendedFor="'${name_FMAP}_bold.nii.gz'"' ${blJSON_FMAP} \
+	jq -r '.meta | .IntendedFor="'${relFMRI}'"' ${blJSON_FMAP} \
 		> ${name_FMAP}_phasediff.json
 	echo ""
 
@@ -224,11 +241,6 @@ fi
 ################################################################################
 # runit
 
-FMRIPVER=1.2.6-1
-MEMGB=28
-NPROC=8
-OPENMPPROC=4
-
 cat <<EOF > ${PWD}/multi_proc.yml
 plugin: LegacyMultiProc
 plugin_args: {maxtasksperchild: 1, memory_gb: $(echo ${MEMGB}), n_procs: $(echo ${NPROC}), raise_insufficient: false}
@@ -240,10 +252,20 @@ else
 	singIMG=docker://poldracklab/fmriprep:${FMRIPVER} 
 fi
 
+if [[ -z ${FS_LICENSE} ]] ; then
+	if [[ -n ${FREESURFER_HOME} ]] ; then
+		FS_LICENSE=${FREESURFER_HOME}/license.txt
+	else
+		echo "need FS_LICENSE to be set. exiting"
+		exit 1
+	fi
+fi
+
 cmd="singularity run --cleanenv \
 		${singIMG} \
 		\
 		--notrack --resource-monitor --skip_bids_validation \
+		--stop-on-first-crash \
 		--use-plugin=${PWD}/multi_proc.yml \
 		--omp-nthreads=${OPENMPPROC} \
 		\
@@ -251,7 +273,7 @@ cmd="singularity run --cleanenv \
 		--template-resampling-grid=2mm \
 		--force-bbr \
 		--skull-strip-template=OASIS \
-		--use-syn-sdc --force-bbr --force-syn \
+		--force-bbr --force-syn \
 		\
 		--fs-license-file=${FS_LICENSE} \
 		\
@@ -259,10 +281,14 @@ cmd="singularity run --cleanenv \
 		\
 		--participant_label=${bidsSub} \
 		\
-		${bidsDir} ${PWD}/output/fmripOut/ participant \
+		${bidsDir} ${outdir} participant \
     "
+if [[ ${TESTINGRUN} = "true" ]] ; then
+	cmd="${cmd} --sloppy" 
+fi
+
 echo $cmd
-if [[ ${TESTING} = "false" ]] ; then
+if [[ ${TESTINGSCRIPT} = "false" ]] ; then
 	eval $cmd
 fi
 
@@ -271,4 +297,4 @@ exit $?
 
 # fake input bids dir will be in ${PWD}/input/${bidsSub}/
 # fmriprep output will be in ${PWD}/output/fmripOut/
-# fmriprep work dir will be in ${PWD}/ouput/fmripworkdir/
+# fmriprep work dir will be in ${PWD}/output/fmripworkdir/

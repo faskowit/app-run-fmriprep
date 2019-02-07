@@ -97,6 +97,8 @@ function bids_short_to_fullname {
         	outFull="reconstruction" ;;
         dir )
         	outFull="direction" ;;
+        task )
+			outFull="TaskName" ;;
 	esac
 
 	echo "$outFull"

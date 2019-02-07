@@ -117,7 +117,7 @@ bidsSub="sub-$sub"
 
 ses=$(jq -r ".meta.session" ${blJSON} )
 noSes="false"
-if [[ ${sub} = "null" ]] ; then
+if [[ ${ses} = "null" ]] ; then
 	# lets handle this
 	ses=''
 	noSes="true"
@@ -134,7 +134,12 @@ mkdir ${PWD}/output/
 # the bids dir will be inside ouf input
 bidsDir=${PWD}/input/
 bidsSubDir=${bidsDir}/${bidsSub}/
-bidsSubSesDir=${bidsSubDir}/ses-${ses}/
+
+if [[ ${noSes} = "true" ]] ; then
+	bidsSubSesDir=${bidsSubDir}/
+else
+	bidsSubSesDir=${bidsSubDir}/ses-${ses}/
+fi
 mkdir -p ${bidsSubSesDir}
 
 # working dir
@@ -174,6 +179,7 @@ name_T1w="${bidsSubSesDir}/anat/${bidsSub}"
 name_T1w=$(bids_namekeyvals ${name_T1w} ${blJSON_T1w} "acq ce rec run" ${ses} )
 cp ${inT1w} ${name_T1w}_T1w.nii.gz
 jq -r ".meta" ${blJSON_T1w} > ${name_T1w}_T1w.json
+bids_phaseencode_check ${name_T1w}_T1w.json
 
 ################################################################################
 # T2w 
@@ -185,6 +191,7 @@ if [[ ${inT2w} != "null" ]] ; then
 	name_T2w=$(bids_namekeyvals ${name_T2w} ${blJSON_T2w} "acq ce rec run" ${ses} )
 	cp ${inT2w} ${name_T2w}_T2w.nii.gz
 	jq -r ".meta" ${blJSON_T2w} > ${name_T2w}_T2w.json
+	bids_phaseencode_check ${name_T2w}_T2w.json 
 
 fi
 
@@ -199,6 +206,7 @@ if [[ ${inFMRI} != "null" ]] ; then
 	name_FMRI=$(bids_namekeyvals ${name_FMRI} ${blJSON_FMRI} "task acq ce dir rec run echo" ${ses} )
 	cp ${inFMRI} ${name_FMRI}_bold.nii.gz
 	jq -r ".meta" ${blJSON_FMRI} > ${name_FMRI}_bold.json
+	bids_phaseencode_check ${name_FMRI}_bold.json 
 
 fi
 
@@ -229,12 +237,13 @@ if [[ ${inFMAP} != "null" ]] ; then
 	# replacing (or setting), the intended for category
 	jq -r '.meta | .IntendedFor="'${relFMRI}'"' ${blJSON_FMAP} \
 		> ${name_FMAP}_phasediff.json
-	echo ""
 
 	for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
 		curMag=${rawMagnitudes[${idx}]}
 		cp ${curMag} ${name_FMAP}_magnitude$((idx+1)).nii.gz
 	done
+
+	bids_phaseencode_check ${name_FMAP}_phasediff.json 
 
 fi
 

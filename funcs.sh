@@ -22,6 +22,28 @@ function checkisdir {
 }
 
 
+function bids_phaseencode_check {
+	# check that any x,y,z direction is replaced with i,j,k
+
+	inJSON=$1
+	pedVal=$( jq -r ".PhaseEncodingDirection" ${inJSON} )
+
+	if [[ ${pedVal} =~ [xyz] ]] ; then
+
+		# brute replace
+		# echo "changing the x,y,z to i,j,k"
+
+		pedVal=$(echo ${pedVal} | sed s,x,i, )
+		pedVal=$(echo ${pedVal} | sed s,y,j, )
+		pedVal=$(echo ${pedVal} | sed s,z,k, )
+
+		echo $(jq -r '.PhaseEncodingDirection="'${pedVal}'"' ${inJSON}) > ${inJSON}
+
+	fi
+
+}
+
+
 function bids_namekeyvals {
 
 	local baseName=$1

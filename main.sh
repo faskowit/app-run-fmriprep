@@ -155,9 +155,9 @@ if [[ ${inFSDIR} != "null" ]] ; then
 
 	# dont know if dir will be just inFSDIR or inFSDIR/output
 	if [[ -d ${inFSDIR}/output ]] ; then
-		cp -v ${inFSDIR}/output/ ${outdir}/${bidsSub}/
+		cp -v ${inFSDIR}/output/ ${outdir}/freesurfer/${bidsSub}/
 	else
-		cp -v ${inFSDIR} ${outdir}/${bidsSub}/
+		cp -v ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
 	fi
 fi
 
@@ -366,3 +366,4 @@ exit $?
 # fake input bids dir will be in ${PWD}/input/${bidsSub}/
 # fmriprep output will be in ${PWD}/output/fmripOut/
 # fmriprep work dir will be in ${PWD}/output/fmripworkdir/
+

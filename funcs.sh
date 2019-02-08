@@ -40,7 +40,6 @@ function bids_phaseencode_check {
 		echo $(jq -r '.PhaseEncodingDirection="'${pedVal}'"' ${inJSON}) > ${inJSON}
 
 	fi
-
 }
 
 
@@ -64,10 +63,13 @@ function bids_namekeyvals {
 
 		tmpval=$( jq -r ".meta.${addparam}" ${inJSON} )
 		if [[ ${tmpval} = "null" ]] ; then
-			# if a fullname exists, try once more
-			if [[ -n ${fullname} ]] ; then
-				tmpval=$( jq -r ".meta.${fullname}" ${inJSON} )
-			fi
+			# if fullname alternatives exists, try once more
+			for ff in $(echo ${fullname}) ; do
+				tmpval=$( jq -r ".meta.${ff}" ${inJSON} )
+				if [[ ${tmpval} != "null" ]] ; then
+					break
+				fi
+			done
 		fi
 
 		# add to basename
@@ -79,28 +81,26 @@ function bids_namekeyvals {
 
 	# output the basename
 	echo "${baseName}"
-
 }
 
 
 function bids_short_to_fullname {
 
-	# populate with fullnames. will only work with 1to1 mappings
+	# populate with fullnames.
 
 	inShort=$1
 	outFull=''
 
 	case ${inShort} in
     	acq )
-        	outFull="acquisition" ;;
+        	outFull="Acquisition acquisition" ;;
     	rec )
-        	outFull="reconstruction" ;;
+        	outFull="Reconstruction reconstruction" ;;
         dir )
-        	outFull="direction" ;;
+        	outFull="Direction direction" ;;
         task )
-			outFull="TaskName" ;;
+			outFull="TaskName Taskname taskname" ;;
 	esac
 
 	echo "$outFull"
-
 }

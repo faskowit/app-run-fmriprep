@@ -12,9 +12,9 @@ TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''
 
-FMRIPVER=1.2.6-1
+FMRIPVER=1.2.6-1 #1.3.0 #1.2.6-1
 MEMGB=28
-NPROC=8
+NPROC=4
 OPENMPPROC=4
 
 ################################################################################
@@ -202,6 +202,9 @@ if [[ ${inFMRI} != "null" ]] ; then
 
 	mkdir -p ${bidsSubSesDir}/func/
 	blJSON_FMRI=$(dirname ${inFMRI})/.brainlife.json
+
+	# fmri needs task in the filename to be defined!
+
 	name_FMRI="${bidsSubSesDir}/func/${bidsSub}"
 	name_FMRI=$(bids_namekeyvals ${name_FMRI} ${blJSON_FMRI} "task acq ce dir rec run echo" ${ses} )
 	cp ${inFMRI} ${name_FMRI}_bold.nii.gz
@@ -216,34 +219,90 @@ fi
 if [[ ${inFMAP} != "null" ]] ; then
 
 	mkdir -p ${bidsSubSesDir}/fmap/
-	blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
-	#blJSON_FMAP=${inFMAP}/.brainlife.json
-	name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-	name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq run" ${ses} )
 
-	# fmap actually has a few things associated with it, hence need to copy 
-	# over additional stuff: fmap is actually:
-	# phasediff.nii.gz, phasediff.json, 
-	# and magnitude files
-
-	fmapDir=$(dirname ${inFMAP})/
-
-	rawPhaseDiff=${fmapDir}/phasediff.nii.gz
-	rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
-
+	# the fmri that the fmap is for
 	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,' )
 
-	cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
-	# replacing (or setting), the intended for category
-	jq -r '.meta | .IntendedFor="'${relFMRI}'"' ${blJSON_FMAP} \
-		> ${name_FMAP}_phasediff.json
+	# need to determine what type of fieldmap.
+	# right now, support phasediff, epi
 
-	for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
-		curMag=${rawMagnitudes[${idx}]}
-		cp ${curMag} ${name_FMAP}_magnitude$((idx+1)).nii.gz
-	done
+	nn=$(basename ${inFMAP})
 
-	bids_phaseencode_check ${name_FMAP}_phasediff.json 
+	if [[ ${nn} =~ "phase" ]] ; then
+
+		blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+
+		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
+		name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq run" ${ses} )
+
+		# fmap actually has a few things associated with it, hence need to copy 
+		# over additional stuff: fmap is actually:
+		# phasediff.nii.gz, phasediff.json, 
+		# and magnitude files
+
+		fmapDir=$(dirname ${inFMAP})/
+
+		rawPhaseDiff=${fmapDir}/phasediff.nii.gz
+		rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
+
+		cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
+		# replacing (or setting), the intended for category
+		jq -r '.meta | .IntendedFor="'${relFMRI}'"' ${blJSON_FMAP} \
+			> ${name_FMAP}_phasediff.json
+
+		for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
+			curMag=${rawMagnitudes[${idx}]}
+			cp ${curMag} ${name_FMAP}_magnitude$((idx+1)).nii.gz
+		done
+
+		bids_phaseencode_check ${name_FMAP}_phasediff.json 
+
+	elif [[ ${nn} =~ "epi" ]] ; then 
+
+		blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+		dir_FMAP=$(dirname ${inFMAP})/
+
+		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
+		name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq ce dir run" ${ses} )
+
+		# get just the direction value from the .brainlife json
+		dirval=$(bids_namekeyvals "YO" ${blJSON_FMAP} "dir" )
+		dirval=$(echo ${dirval} | sed s,YO_dir-,,)
+
+		# now make the name for 1 and 2
+		name_FMAP_1=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-1, )
+		name_FMAP_2=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-2, )
+
+		imgs=($(ls ${dir_FMAP}/*epi*nii.gz ))
+		# if there aren't exactly two images read
+		if [[ ${#imgs[@]} -ne 2 ]] ; then
+			echo "did not read to images for fmap. exiting"
+			exit 1
+		fi
+
+		json1=$(echo ${imgs[0]} | sed s,nii.gz,json, )
+		json2=$(echo ${imgs[1]} | sed s,nii.gz,json, )
+
+		cp ${imgs[0]} ${name_FMAP_1}_epi.nii.gz
+		cp ${imgs[1]} ${name_FMAP_2}_epi.nii.gz
+		cp ${json1} ${name_FMAP_1}_epi.tmp.json
+		cp ${json2} ${name_FMAP_2}_epi.tmp.json
+
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_1}_epi.tmp.json \
+			> ${name_FMAP_1}_epi.json
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_2}_epi.tmp.json \
+			> ${name_FMAP_2}_epi.json
+
+		rm ${name_FMAP_1}_epi.tmp.json
+		rm ${name_FMAP_2}_epi.tmp.json
+
+		bids_phaseencode_check ${name_FMAP_1}_epi.json
+		bids_phaseencode_check ${name_FMAP_2}_epi.json
+
+	else
+		echo "problem parsing fmap name. exiting"
+		exit 1
+	fi
 
 fi
 
@@ -281,7 +340,7 @@ cmd="singularity run --cleanenv \
 		--output-space fsaverage5 fsnative T1w template \
 		--template-resampling-grid=2mm \
 		--force-bbr \
-		--skull-strip-template=OASIS \
+		--skull-strip-template=NKI \
 		--force-bbr --force-syn \
 		\
 		--fs-license-file=${FS_LICENSE} \

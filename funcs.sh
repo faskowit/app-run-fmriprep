@@ -52,8 +52,8 @@ function bids_namekeyvals {
     local session=$4
 
 	# ses added manually
-	if [[ -n ${ses} ]] ; then
-		baseName="${baseName}_ses-${ses}"
+	if [[ -n ${session} ]] ; then
+		baseName="${baseName}_ses-${session}"
 	fi
 
 	for addparam in ${inPARAMS} ; do

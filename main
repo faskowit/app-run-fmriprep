@@ -127,9 +127,12 @@ fi
 # setup bids dir structure
 
 # clean
-rm -rf ${PWD}/input/ ${PWD}/output/
+rm -rf ${PWD}/input/
+rm -rf ${PWD}/fmripworkdir/
+rm -rf ${PWD}/fmripout/
+
+# make input dir
 mkdir ${PWD}/input/ 
-mkdir ${PWD}/output/
 
 # the bids dir will be inside ouf input
 bidsDir=${PWD}/input/
@@ -143,22 +146,16 @@ fi
 mkdir -p ${bidsSubSesDir}
 
 # working dir
-workdir=${PWD}/output/fmripworkdir/
+workdir=${PWD}/fmripworkdir/
 mkdir -p ${workdir}
 
 # output dir
-outdir=${PWD}/output/fmripout/
-mkdir ${outdir}
+outdir=${PWD}/fmripout/
+mkdir -p ${outdir}
 
 # if freesurfer provided, copy it to the same level as output dir
 if [[ ${inFSDIR} != "null" ]] ; then
-
-	# dont know if dir will be just inFSDIR or inFSDIR/output
-	if [[ -d ${inFSDIR}/output ]] ; then
-		cp -v ${inFSDIR}/output/ ${outdir}/freesurfer/${bidsSub}/
-	else
-		cp -v ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
-	fi
+	cp -v ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
 fi
 
 # save a dataset description

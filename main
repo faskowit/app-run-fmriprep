@@ -329,8 +329,8 @@ if [[ -z ${FS_LICENSE} ]] ; then
 	if [[ -n ${FREESURFER_HOME} ]] ; then
 		FS_LICENSE=${FREESURFER_HOME}/license.txt
 	else
-		echo "need FS_LICENSE to be set. exiting"
-		exit 1
+		echo ${FREESURFER_LICENSE} > ${PWD}/.license.txt
+		FS_LICENSE=${PWD}/.license.txt
 	fi
 fi
 

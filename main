@@ -100,12 +100,14 @@ fi
 # extract info from brainlife interface, base on T1w
 
 # get the staging dir, this is where meta information is 
-stagingDir=$(dirname ${inT1w})/
+stagingDir=$(dirname ${inT1w})
+ls -dl ${stagingDir}
 [[ ${stagingDir} = "." ]] && \
 	{ echo "error finding staging directory. exiting" ; exit 1 ; }
 
 # once we have the staging directory, we can extract some info 
 blJSON=${stagingDir}/.brainlife.json
+ls -al ${blJSON}
 [[ ! -f ${blJSON} ]] && \
 	{ echo "error finding blJSON" ;
 	echo "blJSON: ${blJSON}" ;

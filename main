@@ -107,7 +107,10 @@ stagingDir=$(dirname ${inT1w})/
 # once we have the staging directory, we can extract some info 
 blJSON=${stagingDir}/.brainlife.json
 [[ ! -f ${blJSON} ]] && \
-	{ echo "error finding blJSON" ; exit 1 ; }
+	{ echo "error finding blJSON" ;
+	echo "blJSON: ${blJSON}" ;
+	echo "staging dir: ${stagingDir}" ;
+	exit 1 ; }
 
 # get the subject
 sub=$(jq -r ".meta.subject" ${blJSON} )
@@ -361,6 +364,6 @@ fi
 exit $?
 
 # fake input bids dir will be in ${PWD}/input/${bidsSub}/
-# fmriprep output will be in ${PWD}/output/fmripOut/
+# fmriprep output will be in ${PWD}/output/fmripout/
 # fmriprep work dir will be in ${PWD}/output/fmripworkdir/
 

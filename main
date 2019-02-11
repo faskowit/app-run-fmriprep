@@ -8,6 +8,9 @@
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
 
+echo "PWD: $(pwd)"
+echo "EXEDIR read: $EXEDIR"
+
 TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''

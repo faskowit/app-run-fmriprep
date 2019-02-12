@@ -9,17 +9,17 @@ This app runs [fMRIPrep](https://github.com/poldracklab/fmriprep) on the [brainl
 * fMRIPrep documentation: [read the docs](https://fmriprep.readthedocs.io/en/stable/)
 * fMRIPrep also provides documentation to credit the tools employed in the pipeline: [citing tools](https://fmriprep.readthedocs.io/en/stable/citing.html)
 
-### app-author
+### Authors
 - Josh Faskowitz ([@faskowit](https://github.com/faskowit))
+- Soichi Hayashi ([@soichih](https://github.com/soichih))
 
-### brainlife.io leaders
-- Franco Pestilli ([@francopestilli](https://github.com/francopestilli)) (principal investigator)
-- Soichi Hayashi ([@soichih](https://github.com/soichih)) (lead developer)
+### Project director
+- Franco Pestilli ([@francopestilli](https://github.com/francopestilli))
 
 ### Funding 
 [![NSF-BCS-1734853](https://img.shields.io/badge/NSF_BCS-1734853-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1734853)
-[![NSF-BCS-1636893](https://img.shields.io/badge/NSF_BCS-1636893-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1636893)
-[NSF 1342962](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1342962)
+[![NSF-IIS-1636893](https://img.shields.io/badge/NSF_BCS-1636893-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1636893)
+[![NSF-1342962](https://img.shields.io/badge/NSF_DGE-1342962-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1342962)
 
 ## Running the App 
 
@@ -64,4 +64,5 @@ This App requires [singularity](https://www.sylabs.io/singularity/) to run. If y
 
 ---
 
-<sub> This material is based upon work supported by the National Science Foundation Graduate Research Fellowship under Grant No. 1342962. Any opinion, findings, and conclusions or recommendations expressed in this material are those of the authors(s) and do not necessarily reflect the views of the National Science Foundation. </sub>
+### Notes.
+This material is based upon work supported by the National Science Foundation Graduate Research Fellowship under Grant No. 1342962. Any opinion, findings, and conclusions or recommendations expressed in this material are those of the authors(s) and do not necessarily reflect the views of the National Science Foundation.

@@ -9,12 +9,12 @@ This app runs [fMRIPrep](https://github.com/poldracklab/fmriprep) on the [brainl
 * fMRIPrep documentation: [read the docs](https://fmriprep.readthedocs.io/en/stable/)
 * fMRIPrep also provides documentation to credit the tools employed in the pipeline: [citing tools](https://fmriprep.readthedocs.io/en/stable/citing.html)
 
-### app-author
+### Authors
 - Josh Faskowitz ([@faskowit](https://github.com/faskowit))
+- Soichi Hayashi ([@soichih](https://github.com/soichih))
 
-### brainlife.io leaders
-- Franco Pestilli ([@francopestilli](https://github.com/francopestilli)) (principal investigator)
-- Soichi Hayashi ([@soichih](https://github.com/soichih)) (lead developer)
+### Project director
+- Franco Pestilli ([@francopestilli](https://github.com/francopestilli))
 
 ### Funding 
 [![NSF-BCS-1734853](https://img.shields.io/badge/NSF_BCS-1734853-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1734853)

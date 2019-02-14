@@ -153,11 +153,13 @@ mkdir ${outdir}
 # if freesurfer provided, copy it to the same level as output dir
 if [[ ${inFSDIR} != "null" ]] ; then
 
+	mkdir -p ${outdir}/freesurfer/
+
 	# dont know if dir will be just inFSDIR or inFSDIR/output
 	if [[ -d ${inFSDIR}/output ]] ; then
-		cp -v ${inFSDIR}/output/ ${outdir}/freesurfer/${bidsSub}/
+		cp -rv ${inFSDIR}/output/ ${outdir}/freesurfer/${bidsSub}/
 	else
-		cp -v ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
+		cp -rv ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
 	fi
 fi
 

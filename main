@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=24:00:00
+#PBS -l nodes=1:ppn=4,walltime=24:00:00,vmem=31gb
 #PBS -N app-run-fmriprep
 
 #set -e
@@ -7,6 +7,9 @@
 
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
+
+echo "PWD: $(pwd)"
+echo "EXEDIR read: $EXEDIR"
 
 TESTINGSCRIPT="false"
 TESTINGRUN="false"
@@ -100,14 +103,19 @@ fi
 # extract info from brainlife interface, base on T1w
 
 # get the staging dir, this is where meta information is 
-stagingDir=$(dirname ${inT1w})/
+stagingDir=$(dirname ${inT1w})
+ls -dl ${stagingDir}
 [[ ${stagingDir} = "." ]] && \
 	{ echo "error finding staging directory. exiting" ; exit 1 ; }
 
 # once we have the staging directory, we can extract some info 
 blJSON=${stagingDir}/.brainlife.json
+ls -al ${blJSON}
 [[ ! -f ${blJSON} ]] && \
-	{ echo "error finding blJSON" ; exit 1 ; }
+	{ echo "error finding blJSON" ;
+	echo "blJSON: ${blJSON}" ;
+	echo "staging dir: ${stagingDir}" ;
+	exit 1 ; }
 
 # get the subject
 sub=$(jq -r ".meta.subject" ${blJSON} )
@@ -127,9 +135,12 @@ fi
 # setup bids dir structure
 
 # clean
-rm -rf ${PWD}/input/ ${PWD}/output/
+rm -rf ${PWD}/input/
+rm -rf ${PWD}/fmripworkdir/
+rm -rf ${PWD}/fmripout/
+
+# make input dir
 mkdir ${PWD}/input/ 
-mkdir ${PWD}/output/
 
 # the bids dir will be inside ouf input
 bidsDir=${PWD}/input/
@@ -143,16 +154,16 @@ fi
 mkdir -p ${bidsSubSesDir}
 
 # working dir
-workdir=${PWD}/output/fmripworkdir/
+workdir=${PWD}/fmripworkdir/
 mkdir -p ${workdir}
 
 # output dir
-outdir=${PWD}/output/fmripout/
-mkdir ${outdir}
+outdir=${PWD}/fmripout/
+mkdir -p ${outdir}
 
 # if freesurfer provided, copy it to the same level as output dir
 if [[ ${inFSDIR} != "null" ]] ; then
-
+	
 	mkdir -p ${outdir}/freesurfer/
 
 	# dont know if dir will be just inFSDIR or inFSDIR/output
@@ -326,8 +337,8 @@ if [[ -z ${FS_LICENSE} ]] ; then
 	if [[ -n ${FREESURFER_HOME} ]] ; then
 		FS_LICENSE=${FREESURFER_HOME}/license.txt
 	else
-		echo "need FS_LICENSE to be set. exiting"
-		exit 1
+		echo ${FREESURFER_LICENSE} > ${PWD}/.license.txt
+		FS_LICENSE=${PWD}/.license.txt
 	fi
 fi
 
@@ -366,6 +377,6 @@ fi
 exit $?
 
 # fake input bids dir will be in ${PWD}/input/${bidsSub}/
-# fmriprep output will be in ${PWD}/output/fmripOut/
+# fmriprep output will be in ${PWD}/output/fmripout/
 # fmriprep work dir will be in ${PWD}/output/fmripworkdir/
 

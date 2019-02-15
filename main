@@ -9,7 +9,6 @@ EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
 
 echo "PWD: $(pwd)"
-echo "EXEDIR read: $EXEDIR"
 
 TESTINGSCRIPT="false"
 TESTINGRUN="false"
@@ -19,6 +18,10 @@ FMRIPVER=1.2.6-1 #1.3.0 #1.2.6-1
 MEMGB=28
 NPROC=4
 OPENMPPROC=4
+
+WORKDIRNAME=fmripworkdir
+OUTDIRNAME=fmripout
+INDIRNAME=fmripinput
 
 ################################################################################
 # read input from config.json
@@ -42,6 +45,8 @@ else
 	inFMRI="null"
 	inFMAP="null"
 	inFSDIR="null"
+	inODIR="null"
+	inWDIR="null"
 
 	while [ "$1" != "" ]; do
 	    case $1 in
@@ -63,6 +68,14 @@ else
 	                                ;;
 	        -fs | -freesurfer )		shift
 									inFSDIR=$1
+									checkisdir $1
+	                                ;;
+	        -inodir )				shift
+									inODIR=$1
+									checkisdir $1
+	                                ;;
+	        -inwdir )				shift
+									inWDIR=$1
 									checkisdir $1
 	                                ;;
 	        -img | -sing )			shift
@@ -89,8 +102,8 @@ fi
 ################################################################################
 # some logical checks
 
-if [[ ${inT1w} = "null" ]] ; then
-	echo "app needs minimally a T1w. exiting"
+if [[ ${inT1w} = "null" ]] || [[ ${inFMRI} = "null" ]] ; then
+	echo "app needs minimally a T1w and fmri. exiting"
 	exit 1
 fi
 
@@ -104,7 +117,9 @@ fi
 
 # get the staging dir, this is where meta information is 
 stagingDir=$(dirname ${inT1w})
+echo "ls dir where initial bl info read--> "
 ls -dl ${stagingDir}
+
 [[ ${stagingDir} = "." ]] && \
 	{ echo "error finding staging directory. exiting" ; exit 1 ; }
 
@@ -134,16 +149,25 @@ fi
 ################################################################################
 # setup bids dir structure
 
-# clean
-rm -rf ${PWD}/input/
-rm -rf ${PWD}/fmripworkdir/
-rm -rf ${PWD}/fmripout/
+rm -rf ${PWD}/${INDIRNAME}/
+
+if [[ ${inWDIR} = "null" ]] ; then
+	rm -rf ${PWD}/${WORKDIRNAME}/
+else
+	# asv for convenience rn
+	cp -as $(readlink -f ${inWDIR}) ${PWD}/${WORKDIRNAME}/ 
+fi
+if [[ ${inODIR} = "null" ]] ; then
+	rm -rf ${PWD}/${OUTDIRNAME}/
+else
+	cp -as $(readlink -f ${inODIR}) ${PWD}/${OUTDIRNAME}/
+fi
 
 # make input dir
-mkdir ${PWD}/input/ 
+mkdir ${PWD}/${INDIRNAME}/ 
 
 # the bids dir will be inside ouf input
-bidsDir=${PWD}/input/
+bidsDir=${PWD}/${INDIRNAME}/
 bidsSubDir=${bidsDir}/${bidsSub}/
 
 if [[ ${noSes} = "true" ]] ; then
@@ -154,16 +178,16 @@ fi
 mkdir -p ${bidsSubSesDir}
 
 # working dir
-workdir=${PWD}/fmripworkdir/
+workdir=${PWD}/${WORKDIRNAME}/
 mkdir -p ${workdir}
 
 # output dir
-outdir=${PWD}/fmripout/
+outdir=${PWD}/${OUTDIRNAME}/
 mkdir -p ${outdir}
 
 # if freesurfer provided, copy it to the same level as output dir
 if [[ ${inFSDIR} != "null" ]] ; then
-	
+
 	mkdir -p ${outdir}/freesurfer/
 
 	# dont know if dir will be just inFSDIR or inFSDIR/output
@@ -376,7 +400,7 @@ fi
 #exit code from the last command (singularity) will be used.
 exit $?
 
-# fake input bids dir will be in ${PWD}/input/${bidsSub}/
-# fmriprep output will be in ${PWD}/output/fmripout/
-# fmriprep work dir will be in ${PWD}/output/fmripworkdir/
+# fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
+# fmriprep output will be in ${PWD}/output/${OUTDIRNAME}/
+# fmriprep work dir will be in ${PWD}/output/${WORKDIRNAME}/
 

@@ -24,6 +24,7 @@ OPENMPPROC=4
 WORKDIRNAME=fmripworkdir
 OUTDIRNAME=fmripout
 INDIRNAME=fmripinput
+DERIVOUTNAME=output
 
 cat <<EOF > ${PWD}/multi_proc.yml
 plugin: LegacyMultiProc
@@ -414,9 +415,53 @@ if [[ ${TESTINGSCRIPT} = "false" ]] ; then
 fi
 
 #exit code from the last command (singularity) will be used.
-exit $?
+exitStatus=$?
+
+if [[ ${exitStatus} -eq 0 ]]
+	# lets copy specifics out of the workdir
+	
+	bloDir=${PWD}/${DERIVOUTNAME}/
+	mkdir -p ${bloDir}
+
+	# FMRI STUFF
+
+	# get basename
+	inFMRI=${name_FMRI}_bold.nii.gz
+	outBase=$(echo ${inFMRI} | sed s,_bold.nii.gz,, )
+
+	# get the preproc fmri vol
+	tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
+	cp ${tmp} ${bloDir}/space-T1w_desc-preproc_bold.nii.gz
+
+	# get the preproc fmri volmask
+	tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
+	cp ${tmp} ${bloDir}/space-T1w_desc-brain_mask.nii.gz
+
+	# get the confounds
+	tmp=${outBase}_desc-confounds_regressors.tsv
+	cp ${tmp} ${bloDir}/desc-confounds_regressors.tsv
+
+	# get the native preproc fmri surf
+	tmp=${outBase}_space-fsnative_hemi-L.func.gii
+	cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
+	tmp=${outBase}_space-fsnative_hemi-R.func.gii
+	cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
+
+	# get the fsaverage5 preproc fmri surf
+	tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
+	cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
+	tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
+	cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
+
+	# ANAT STUFF
+	# TODO
+
+else
+	# else fail with the exit status
+	exit ${exitStatus}
+fi
 
 # fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
-# fmriprep output will be in ${PWD}/output/${OUTDIRNAME}/
-# fmriprep work dir will be in ${PWD}/output/${WORKDIRNAME}/
-
+# fmriprep output will be in ${PWD}/${OUTDIRNAME}/
+# fmriprep work dir will be in ${PWD}/${WORKDIRNAME}/
+# specific outputs storred to ${PWD}/${DERIVOUTNAME}/[images]

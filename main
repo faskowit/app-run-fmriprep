@@ -417,49 +417,70 @@ fi
 #exit code from the last command (singularity) will be used.
 exitStatus=$?
 
-if [[ ${exitStatus} -eq 0 ]]
+if [[ ${exitStatus} -eq 0 ]] ; then
 	# lets copy specifics out of the workdir
 	
-	bloDir=${PWD}/${DERIVOUTNAME}/
+	bloDir=${PWD}/${DERIVOUTNAME}
 	mkdir -p ${bloDir}
 
 	# FMRI STUFF
 
 	# get basename
 	inFMRI=${name_FMRI}_bold.nii.gz
-	outBase=$(echo ${inFMRI} | sed s,_bold.nii.gz,, )
+
+	if [[ ${noSes} = "true" ]] ; then
+		oDirFunc=${outdir}/fmriprep/${bidsSub}/func/
+	else
+		oDirFunc=${outdir}/fmriprep/${bidsSub}/ses-${ses}/func/
+	fi
+
+	outBase="${oDirFunc}/$(basename $(echo ${inFMRI} | sed s,_bold.nii.gz,, ))"
 
 	# get the preproc fmri vol
 	tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
-	cp ${tmp} ${bloDir}/space-T1w_desc-preproc_bold.nii.gz
+	cp -v ${tmp} ${bloDir}_bold/bold.nii.gz
 
 	# get the preproc fmri volmask
 	tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
-	cp ${tmp} ${bloDir}/space-T1w_desc-brain_mask.nii.gz
+	cp -v ${tmp} ${bloDir}_mask/mask.nii.gz
 
 	# get the confounds
 	tmp=${outBase}_desc-confounds_regressors.tsv
-	cp ${tmp} ${bloDir}/desc-confounds_regressors.tsv
+	cp -v ${tmp} ${bloDir}_regress/regressors.tsv
 
 	# get the native preproc fmri surf
-	tmp=${outBase}_space-fsnative_hemi-L.func.gii
-	cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
-	tmp=${outBase}_space-fsnative_hemi-R.func.gii
-	cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
+	#tmp=${outBase}_space-fsnative_hemi-L.func.gii
+	#cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
+	#tmp=${outBase}_space-fsnative_hemi-R.func.gii
+	#cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
 
 	# get the fsaverage5 preproc fmri surf
-	tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
-	cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
-	tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
-	cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
+	#tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
+	#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
+	#tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
+	#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
 
 	# ANAT STUFF
-	# TODO
+	inT1w=${name_T1w}_T1w.nii.gz
 
-else
-	# else fail with the exit status
-	exit ${exitStatus}
+	if [[ ${noSes} = "true" ]] ; then
+		oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
+	else
+		oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
+	fi
+
+	outBase="${oDirAnat}/$(basename $(echo ${inT1w} | sed s,_T1w.nii.gz,, ))"
+
+	# get the preproc fmri vol
+	tmp=${outBase}_desc-preproc_T1w.nii.gz
+	cp -v ${tmp} ${bloDir}_t1/t1.nii.gz
+
+	tmp=${outBase}_desc-brain_mask.nii.gz
+	cp -v ${tmp} ${bloDir}_t1mask/mask.nii.gz
+
 fi
+
+exit ${exitStatus}
 
 # fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
 # fmriprep output will be in ${PWD}/${OUTDIRNAME}/

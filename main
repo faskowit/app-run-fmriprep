@@ -16,7 +16,7 @@ TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''
 
-FMRIPVER=1.3.0.post2
+FMRIPVER=1.2.6-1
 MEMGB=28
 NPROC=4
 OPENMPPROC=4
@@ -438,14 +438,17 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 
 	# get the preproc fmri vol
 	tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
+	mkdir -p ${bloDir}_bold/
 	cp -v ${tmp} ${bloDir}_bold/bold.nii.gz
 
 	# get the preproc fmri volmask
 	tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
+	mkdir ${bloDir}_mask/
 	cp -v ${tmp} ${bloDir}_mask/mask.nii.gz
 
 	# get the confounds
 	tmp=${outBase}_desc-confounds_regressors.tsv
+	mkdir -p ${bloDir}_regress/
 	cp -v ${tmp} ${bloDir}_regress/regressors.tsv
 
 	# get the native preproc fmri surf
@@ -469,7 +472,7 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 		oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
 	fi
 
-	outBase="${oDirAnat}/$(basename $(echo ${inT1w} | sed s,_T1w.nii.gz,, ))"
+	outBase="${oDirAnat}/${bidsSub}"
 
 	# get the preproc fmri vol
 	tmp=${outBase}_desc-preproc_T1w.nii.gz

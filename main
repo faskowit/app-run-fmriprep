@@ -421,7 +421,6 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 	# lets copy specifics out of the workdir
 	
 	bloDir=${PWD}/${DERIVOUTNAME}
-	mkdir -p ${bloDir}
 
 	# FMRI STUFF
 
@@ -476,9 +475,11 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 
 	# get the preproc fmri vol
 	tmp=${outBase}_desc-preproc_T1w.nii.gz
+	mkdir -p ${bloDir}_t1/
 	cp -v ${tmp} ${bloDir}_t1/t1.nii.gz
 
 	tmp=${outBase}_desc-brain_mask.nii.gz
+	mkdir -p ${bloDir}_t1mask/
 	cp -v ${tmp} ${bloDir}_t1mask/mask.nii.gz
 
 fi

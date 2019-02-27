@@ -442,8 +442,8 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 
 	# get the preproc fmri volmask
 	tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
-	mkdir ${bloDir}_mask/
-	cp -v ${tmp} ${bloDir}_mask/mask.nii.gz
+	mkdir ${bloDir}_boldmask/
+	cp -v ${tmp} ${bloDir}_boldmask/mask.nii.gz
 
 	# get the confounds
 	tmp=${outBase}_desc-confounds_regressors.tsv

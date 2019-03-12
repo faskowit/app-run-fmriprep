@@ -3,8 +3,6 @@
 
 # app-run-fmriprep
 
-version 0.0.2
-
 This app runs [fMRIPrep](https://github.com/poldracklab/fmriprep) on the [brainlife.io](https://brainlife.io/) interface. fMRIPrep is a robust processing tool delevoped by the [Poldrack Lab at Stanford](https://poldracklab.stanford.edu/). The pipelines process T1w, T2w, fMRI, and fieldmaps by calling a series of functions from FSL, FreeSurfer, ANTs, and nipy. It applies these tools in a principled way designed to handle common imaging artifacts and biases in a parimonious manner. It outputs processed anatomical and functional images for further analysis. 
 
 * fMRIPrep paper: [nature methods paper](https://doi.org/10.1038/s41592-018-0235-4)
@@ -27,7 +25,7 @@ This app runs [fMRIPrep](https://github.com/poldracklab/fmriprep) on the [brainl
 
 ### On Brainlife.io
 
-TODO
+Check out the brainlife app [here](https://doi.org/10.25663/brainlife.app.160)
 
 ### Running Locally
 
@@ -38,7 +36,8 @@ A
   ```json
   {
     "t1": "./t1.nii.gz",
-    "fmri" "./bold.nii.gz"
+    "fmri": "./bold.nii.gz",
+    "freesurfer": "./fsdir"
   }
   ```
 
@@ -53,12 +52,7 @@ B
 
 ## Output
 
-TODO
-
-```
-output = 
-
-```
+This app outputs the completed fmriprep dir, along with some of the outputs mapped for the brainlife interface.
 
 ### Dependencies
 

@@ -1,9 +1,6 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=4,walltime=24:00:00,vmem=31gb
+#PBS -l nodes=1:ppn=4,walltime=12:00:00,vmem=24gb
 #PBS -N app-run-fmriprep
-
-#set -e
-#set -x
 
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
@@ -17,9 +14,9 @@ TESTINGRUN="false"
 CMDLINESINGIMG=''
 
 FMRIPVER=1.2.6-1
-MEMGB=28
+MEMGB=22
 NPROC=4
-OPENMPPROC=4
+OPENMPPROC=2
 
 WORKDIRNAME=fmripworkdir
 OUTDIRNAME=fmripout
@@ -488,5 +485,6 @@ exit ${exitStatus}
 
 # fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
 # fmriprep output will be in ${PWD}/${OUTDIRNAME}/
+# !!! let's not retain work dir anymore... !!!
 # fmriprep work dir will be in ${PWD}/${WORKDIRNAME}/
 # specific outputs storred to ${PWD}/${DERIVOUTNAME}/[images]

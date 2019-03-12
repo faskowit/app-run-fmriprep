@@ -3,6 +3,8 @@
 
 # app-run-fmriprep
 
+version 0.0.3
+
 This app runs [fMRIPrep](https://github.com/poldracklab/fmriprep) on the [brainlife.io](https://brainlife.io/) interface. fMRIPrep is a robust processing tool delevoped by the [Poldrack Lab at Stanford](https://poldracklab.stanford.edu/). The pipelines process T1w, T2w, fMRI, and fieldmaps by calling a series of functions from FSL, FreeSurfer, ANTs, and nipy. It applies these tools in a principled way designed to handle common imaging artifacts and biases in a parimonious manner. It outputs processed anatomical and functional images for further analysis. 
 
 * fMRIPrep paper: [nature methods paper](https://doi.org/10.1038/s41592-018-0235-4)

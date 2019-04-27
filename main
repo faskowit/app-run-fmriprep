@@ -152,13 +152,16 @@ ls -dl ${stagingDir}
 	{ echo "error finding staging directory. exiting" ; exit 1 ; }
 
 # once we have the staging directory, we can extract some info 
-blJSON=${stagingDir}/.brainlife.json
-ls -al ${blJSON}
-[[ ! -f ${blJSON} ]] && \
-	{ echo "error finding blJSON" ;
-	echo "blJSON: ${blJSON}" ;
-	echo "staging dir: ${stagingDir}" ;
-	exit 1 ; }
+#blJSON=${stagingDir}/.brainlife.json
+#ls -al ${blJSON}
+#[[ ! -f ${blJSON} ]] && \
+#	{ echo "error finding blJSON" ;
+#	echo "blJSON: ${blJSON}" ;
+#	echo "staging dir: ${stagingDir}" ;
+#	exit 1 ; }
+
+jq '._inputs[] | select(.id == "t1w")' config.json > t1w.json
+blJSON=t1w.json
 
 # get the subject
 sub=$(jq -r ".meta.subject" ${blJSON} )
@@ -239,7 +242,8 @@ BIDSDESCRIPT
 # T1w 
 
 mkdir -p ${bidsSubSesDir}/anat
-blJSON_T1w=$(dirname ${inT1w})/.brainlife.json
+#blJSON_T1w=$(dirname ${inT1w})/.brainlife.json
+blJSON_T1w=t1w.json
 name_T1w="${bidsSubSesDir}/anat/${bidsSub}"
 name_T1w=$(bids_namekeyvals ${name_T1w} ${blJSON_T1w} "acq ce rec run" ${ses} )
 cp ${inT1w} ${name_T1w}_T1w.nii.gz
@@ -250,8 +254,9 @@ bids_phaseencode_check ${name_T1w}_T1w.json
 # T2w 
 
 if [[ ${inT2w} != "null" ]] ; then
-
-	blJSON_T2w=$(dirname ${inT2w})/.brainlife.json
+	jq '._inputs[] | select(.id == "t2w")' config.json > t2w.json
+	blJSON_T2w=t2w.json
+	#blJSON_T2w=$(dirname ${inT2w})/.brainlife.json
 	name_T2w="${bidsSubSesDir}/anat/${bidsSub}"
 	name_T2w=$(bids_namekeyvals ${name_T2w} ${blJSON_T2w} "acq ce rec run" ${ses} )
 	cp ${inT2w} ${name_T2w}_T2w.nii.gz
@@ -266,10 +271,10 @@ fi
 if [[ ${inFMRI} != "null" ]] ; then
 
 	mkdir -p ${bidsSubSesDir}/func/
-	blJSON_FMRI=$(dirname ${inFMRI})/.brainlife.json
-
+	jq '._inputs[] | select(.id == "fmri")' config.json > fmri.json
+	#blJSON_FMRI=$(dirname ${inFMRI})/.brainlife.json
+	blJSON_FMRI=fmri.json
 	# fmri needs task in the filename to be defined!
-
 	name_FMRI="${bidsSubSesDir}/func/${bidsSub}"
 	name_FMRI=$(bids_namekeyvals ${name_FMRI} ${blJSON_FMRI} "task acq ce dir rec run echo" ${ses} )
 	cp ${inFMRI} ${name_FMRI}_bold.nii.gz
@@ -293,9 +298,12 @@ if [[ ${inFMAP} != "null" ]] ; then
 
 	nn=$(basename ${inFMAP})
 
+	jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
+	blJSON_FMAP=fmap.json
+
 	if [[ ${nn} =~ "phase" ]] ; then
 
-		blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+		#blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
 
 		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
 		name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq run" ${ses} )
@@ -324,7 +332,7 @@ if [[ ${inFMAP} != "null" ]] ; then
 
 	elif [[ ${nn} =~ "epi" ]] ; then 
 
-		blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+		#blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
 		dir_FMAP=$(dirname ${inFMAP})/
 
 		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"

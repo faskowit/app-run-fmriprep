@@ -2,12 +2,9 @@
 #PBS -l nodes=1:ppn=4,walltime=12:00:00,vmem=24gb
 #PBS -N app-run-fmriprep
 
+
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
-
-echo "PWD: $(pwd)"
-echo "ls pwd dir read--> "
-ls -dl ${PWD}
 
 TESTINGSCRIPT="false"
 TESTINGRUN="false"
@@ -60,7 +57,6 @@ if [[ -f config.json ]] ; then
 	inT1w=`jq -r '.t1' config.json`
 	inT2w=`jq -r '.t2' config.json`
 	inFMRI=`jq -r '.fmri' config.json`
-	inFMAP=`jq -r '.fmap' config.json`
 	inFSDIR=`jq -r '.fsin' config.json`
 	inODIR=`jq -r '.inodir' config.json`
 	inWDIR=`jq -r '.inwdir' config.json`
@@ -71,7 +67,6 @@ else
 	inT1w="null"
 	inT2w="null"
 	inFMRI="null"
-	inFMAP="null"
 	inFSDIR="null"
 	inODIR="null"
 	inWDIR="null"
@@ -88,10 +83,6 @@ else
 	                                ;;
 	        -fmri | -func )    		shift
 									inFMRI=$1
-									checkisfile $1
-	                                ;;
-	        -fmap | -fieldmap )  	shift
-									inFMAP=$1
 									checkisfile $1
 	                                ;;
 	        -fs | -freesurfer )		shift
@@ -127,6 +118,8 @@ else
 
 fi
 
+set -x
+
 ################################################################################
 # some logical checks
 
@@ -135,17 +128,17 @@ if [[ ${inT1w} = "null" ]] || [[ ${inFMRI} = "null" ]] ; then
 	exit 1
 fi
 
-if [[ ${inFMAP} != "null" ]] && [[ ${inFMRI} = "null" ]] ; then
-	echo "need fmri for fmap. exiting"
-	exit 1
-fi
+#if [[ ${inFMAP} != "null" ]] && [[ ${inFMRI} = "null" ]] ; then
+#	echo "need fmri for fmap. exiting"
+#	exit 1
+#fi
 
 ################################################################################
 # extract info from brainlife interface, base on T1w
 
 # get the staging dir, this is where meta information is 
 stagingDir=$(dirname ${inT1w})
-echo "ls dir where initial bl info read--> "
+echo "ls dir where initial bl info read--> $stagingDir"
 ls -dl ${stagingDir}
 
 [[ ${stagingDir} = "." ]] && \
@@ -286,67 +279,75 @@ fi
 ################################################################################
 # FMAP
 
-if [[ ${inFMAP} != "null" ]] ; then
+jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
+if [ ! -z fmap.json ]; then
 
 	mkdir -p ${bidsSubSesDir}/fmap/
 
 	# the fmri that the fmap is for
-	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,' )
+	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,')
+    fieldmap_path=$(jq -r .fieldmap config.json) #might not exit but I am using ti find the path
+    fmapDir=`dirname $fieldmap_path`
 
 	# need to determine what type of fieldmap.
 	# right now, support phasediff, epi
 
-	nn=$(basename ${inFMAP})
-
-	jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
-	blJSON_FMAP=fmap.json
-
-	if [[ ${nn} =~ "phase" ]] ; then
-
-		#blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
+    ############ fmap / phasediff
+    #phasediff.nii.gz/json
+    #magnitude1.nii.gz/json
+    #magnitude2.nii.gz/json
+    if [ -f $(jq -r .phasediff config.json) ] ; then
 
 		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-		name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq run" ${ses} )
+		name_FMAP=$(bids_namekeyvals ${name_FMAP} fmap.json "acq run" ${ses} )
 
 		# fmap actually has a few things associated with it, hence need to copy 
 		# over additional stuff: fmap is actually:
 		# phasediff.nii.gz, phasediff.json, 
 		# and magnitude files
 
-		fmapDir=$(dirname ${inFMAP})/
-
 		rawPhaseDiff=${fmapDir}/phasediff.nii.gz
 		rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
 
 		cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
 		# replacing (or setting), the intended for category
-		jq -r '.meta | .IntendedFor="'${relFMRI}'"' ${blJSON_FMAP} \
-			> ${name_FMAP}_phasediff.json
+		jq -r '.meta | .IntendedFor="'${relFMRI}'"' fmap.json > ${name_FMAP}_phasediff.json
 
 		for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
-			curMag=${rawMagnitudes[${idx}]}
-			cp ${curMag} ${name_FMAP}_magnitude$((idx+1)).nii.gz
+			cp ${rawMagnitudes[${idx}]} ${name_FMAP}_magnitude$((idx+1)).nii.gz
+            #TODO - what about _magnitue1/2.json?
 		done
 
 		bids_phaseencode_check ${name_FMAP}_phasediff.json 
 
-	elif [[ ${nn} =~ "epi" ]] ; then 
+    ############ fmap / 2phasemag
+    #phase1.nii.gz / json
+    #phase2.nii.gz / json
+    #magnitude1.nii.gz /json
+    #magnitude2.nii.gz / json
+    #TODO..
 
-		#blJSON_FMAP=$(dirname ${inFMAP})/.brainlife.json
-		dir_FMAP=$(dirname ${inFMAP})/
+    ############ fmap / real
+    #fieldmap.nii.gz / json
+    #magnitude.nii.gz
+    #TODO.
+
+    ############ fmap / epi
+    #N.epi.nii.gz /json
+    elif [ -f $(jq -r .ap config.json) ] ; then
 
 		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-		name_FMAP=$(bids_namekeyvals ${name_FMAP} ${blJSON_FMAP} "acq ce dir run" ${ses} )
+		name_FMAP=$(bids_namekeyvals ${name_FMAP} fmap.json "acq ce dir run" ${ses} )
 
 		# get just the direction value from the .brainlife json
-		dirval=$(bids_namekeyvals "YO" ${blJSON_FMAP} "dir" )
+		dirval=$(bids_namekeyvals "YO" fmap.json "dir" )
 		dirval=$(echo ${dirval} | sed s,YO_dir-,,)
 
 		# now make the name for 1 and 2
 		name_FMAP_1=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-1, )
 		name_FMAP_2=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-2, )
 
-		imgs=($(ls ${dir_FMAP}/*epi*nii.gz ))
+		imgs=($(ls ${fmapDir}/*epi*nii.gz ))
 		# if there aren't exactly two images read
 		if [[ ${#imgs[@]} -ne 2 ]] ; then
 			echo "did not read to images for fmap. exiting"
@@ -373,7 +374,7 @@ if [[ ${inFMAP} != "null" ]] ; then
 		bids_phaseencode_check ${name_FMAP_2}_epi.json
 
 	else
-		echo "problem parsing fmap name. exiting"
+		echo "problem parsing fmap. exiting"
 		exit 1
 	fi
 

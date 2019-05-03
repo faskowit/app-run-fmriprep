@@ -280,7 +280,7 @@ fi
 # FMAP
 
 jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
-if [ ! -z fmap.json ]; then
+if [ ! -s fmap.json ]; then
 
 	mkdir -p ${bidsSubSesDir}/fmap/
 

@@ -490,6 +490,11 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 
 fi
 
+# save lots of space
+if [[ -d ${PWD}/${WORKDIRNAME}/ ]] ; then
+    rm -r ${PWD}/${WORKDIRNAME}/
+fi
+
 exit ${exitStatus}
 
 # fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/

@@ -157,18 +157,22 @@ jq '._inputs[] | select(.id == "t1w")' config.json > t1w.json
 blJSON=t1w.json
 
 # get the subject
-sub=$(jq -r ".meta.subject" ${blJSON} )
-[[ ${sub} = "null" ]] && \
-	{ echo "error finding sub" ; exit 1 ; }
-bidsSub="sub-$sub"
+#sub=$(jq -r ".meta.subject" ${blJSON} )
+#[[ ${sub} = "null" ]] && \
+#	{ echo "error finding sub" ; exit 1 ; }
+#bidsSub="sub-$sub"
+# for now, just use fake subject name
+bidsSub="sub-TTTEMPSUB"
 
-ses=$(jq -r ".meta.session" ${blJSON} )
+#ses=$(jq -r ".meta.session" ${blJSON} )
+#noSes="false"
+#if [[ ${ses} = "null" ]] ; then
+#	# lets handle this
+#	ses=''
+#	noSes="true"
+#fi
 noSes="false"
-if [[ ${ses} = "null" ]] ; then
-	# lets handle this
-	ses=''
-	noSes="true"
-fi
+ses="SSSES"
 
 ################################################################################
 # setup bids dir structure

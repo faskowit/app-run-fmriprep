@@ -1,7 +1,6 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=4,walltime=12:00:00,vmem=80gb
+#PBS -l nodes=1:ppn=8,walltime=12:00:00,vmem=30gb
 #PBS -N app-run-fmriprep
-
 
 EXEDIR=$(dirname "$(readlink -f "$0")")/
 source ${EXEDIR}/funcs.sh
@@ -10,25 +9,25 @@ TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''
 
-FMRIPVER=1.2.6-1
-MEMGB=22
-NPROC=4
-OPENMPPROC=2
+#FMRIPVER=1.2.6-1
+#MEMGB=22
+#NPROC=4
+#OPENMPPROC=2
 
 WORKDIRNAME=fmripworkdir
 OUTDIRNAME=fmripout
 INDIRNAME=fmripinput
 DERIVOUTNAME=output
 
-cat <<EOF > ${PWD}/multi_proc.yml
-plugin: LegacyMultiProc
-plugin_args: {maxtasksperchild: 1, memory_gb: $(echo ${MEMGB}), n_procs: $(echo ${NPROC}), raise_insufficient: false}
-EOF
+#cat <<EOF > ${PWD}/multi_proc.yml
+#plugin: LegacyMultiProc
+#plugin_args: {maxtasksperchild: 1, memory_gb: 80, n_procs: 4, raise_insufficient: false}
+#EOF
 
 # fmriprep vars
-FMRIP_RUNNINGVARS="--notrack --resource-monitor --skip_bids_validation --stop-on-first-crash"
-FMRIP_PLUGIN="--use-plugin=${PWD}/multi_proc.yml"
-FMRIP_OPENMP="--omp-nthreads=${OPENMPPROC}"
+FMRIP_RUNNINGVARS="--notrack --resource-monitor --skip_bids_validation --stop-on-first-crash --mem-mb 30000 -omp-nthreads 8"
+#FMRIP_PLUGIN="--use-plugin=${PWD}/multi_proc.yml"
+#FMRIP_OPENMP="--omp-nthreads=${OPENMPPROC}"
 
 FMRIP_OUTPUTSPACE="--output-space fsaverage5 fsnative T1w template"
 FMRIP_OUTRESAMPLE="--template-resampling-grid=2mm"
@@ -37,9 +36,6 @@ FMRIP_SYN="--force-syn"
 FMRIP_SKULLSTRIP="--skull-strip-template=NKI"
 
 cmd_fmrip_globals="${FMRIP_RUNNINGVARS} \
-						${FMRIP_PLUGIN}	\
-						${FMRIP_OPENMP} \
-						\
 						${FMRIP_OUTPUTSPACE} \
 						${FMRIP_OUTRESAMPLE} \
 						${FMRIP_BBR} \
@@ -390,7 +386,7 @@ fi
 if [[ -n ${CMDLINESINGIMG} ]] ; then
 	singIMG=${CMDLINESINGIMG}
 else
-	singIMG=docker://poldracklab/fmriprep:${FMRIPVER} 
+	singIMG=docker://poldracklab/fmriprep:1.3.2
 fi
 
 if [[ -z ${FS_LICENSE} ]] ; then

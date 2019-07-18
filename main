@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=12:00:00,vmem=30gb
+#PBS -l nodes=1:ppn=8,walltime=3:00:00,vmem=30gb
 #PBS -N app-run-fmriprep
 
 EXEDIR=$(dirname "$(readlink -f "$0")")/

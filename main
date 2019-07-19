@@ -173,7 +173,7 @@ ses="SSSES"
 ################################################################################
 # setup bids dir structure
 
-rm -rf ${PWD}/${INDIRNAME}/
+rm -rf ${PWD}/${INDIRNA1.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-11.2.6-1ME}/
 
 if [[ ${inWDIR} = "null" ]] ; then
 	rm -rf ${PWD}/${WORKDIRNAME}/
@@ -386,7 +386,7 @@ fi
 if [[ -n ${CMDLINESINGIMG} ]] ; then
 	singIMG=${CMDLINESINGIMG}
 else
-	singIMG=docker://poldracklab/fmriprep:1.3.2
+	singIMG=docker://poldracklab/fmriprep:1.2.6-1 #1.3.2
 fi
 
 if [[ -z ${FS_LICENSE} ]] ; then

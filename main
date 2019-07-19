@@ -9,7 +9,8 @@ TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''
 
-singIMG=docker://poldracklab/fmriprep:1.3.2 #1.2.6-1
+#singIMG=docker://poldracklab/fmriprep:1.3.2
+singIMG=docker://poldracklab/fmriprep:1.2.6-1
 
 WORKDIRNAME=fmripworkdir
 OUTDIRNAME=fmripout

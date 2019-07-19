@@ -25,7 +25,7 @@ DERIVOUTNAME=output
 #EOF
 
 # fmriprep vars
-FMRIP_RUNNINGVARS="--notrack --resource-monitor --skip_bids_validation --stop-on-first-crash --mem-mb 30000 -omp-nthreads 8"
+FMRIP_RUNNINGVARS="--notrack --resource-monitor --skip_bids_validation --stop-on-first-crash --mem-mb 30000 --omp-nthreads 8"
 #FMRIP_PLUGIN="--use-plugin=${PWD}/multi_proc.yml"
 #FMRIP_OPENMP="--omp-nthreads=${OPENMPPROC}"
 
@@ -400,15 +400,10 @@ fi
 
 cmd="singularity run --cleanenv \
 		${singIMG} \
-		\
 		${cmd_fmrip_globals} \
-		\
 		--fs-license-file=${FS_LICENSE} \
-		\
 		--work-dir=${workdir} \
-		\
 		--participant_label=${bidsSub} \
-		\
 		${bidsDir} ${outdir} participant \
     "
 if [[ ${TESTINGRUN} = "true" ]] ; then

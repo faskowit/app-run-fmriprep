@@ -9,38 +9,29 @@ TESTINGSCRIPT="false"
 TESTINGRUN="false"
 CMDLINESINGIMG=''
 
-#FMRIPVER=1.2.6-1
-#MEMGB=22
-#NPROC=4
-#OPENMPPROC=2
+singIMG=docker://poldracklab/fmriprep:1.3.2 #1.2.6-1
 
 WORKDIRNAME=fmripworkdir
 OUTDIRNAME=fmripout
 INDIRNAME=fmripinput
 DERIVOUTNAME=output
 
-#cat <<EOF > ${PWD}/multi_proc.yml
-#plugin: LegacyMultiProc
-#plugin_args: {maxtasksperchild: 1, memory_gb: 80, n_procs: 4, raise_insufficient: false}
-#EOF
+cmd_fmrip_globals="--notrack \
+    --resource-monitor \
+    --skip_bids_validation \
+    --stop-on-first-crash \
+    --use-plugin=multi_proc.yml \
+    --output-space fsaverage5 fsnative T1w template \
+    --template-resampling-grid=2mm \
+    --force-bbr \
+    --force-syn \
+    --skull-strip-template=NKI \
+"
 
-# fmriprep vars
-FMRIP_RUNNINGVARS="--notrack --resource-monitor --skip_bids_validation --stop-on-first-crash --mem-mb 30000 --omp-nthreads 8"
-#FMRIP_PLUGIN="--use-plugin=${PWD}/multi_proc.yml"
-#FMRIP_OPENMP="--omp-nthreads=${OPENMPPROC}"
-
-FMRIP_OUTPUTSPACE="--output-space fsaverage5 fsnative T1w template"
-FMRIP_OUTRESAMPLE="--template-resampling-grid=2mm"
-FMRIP_BBR="--force-bbr"
-FMRIP_SYN="--force-syn"
-FMRIP_SKULLSTRIP="--skull-strip-template=NKI"
-
-cmd_fmrip_globals="${FMRIP_RUNNINGVARS} \
-						${FMRIP_OUTPUTSPACE} \
-						${FMRIP_OUTRESAMPLE} \
-						${FMRIP_BBR} \
-						${FMRIP_SYN} \
-						${FMRIP_SKULLSTRIP} "
+cat <<EOF > multi_proc.yml
+plugin: LegacyMultiProc
+plugin_args: {maxtasksperchild: 1, memory_gb: 28, n_procs: 8, raise_insufficient: false}
+EOF
 
 ################################################################################
 # read input from config.json
@@ -116,6 +107,14 @@ fi
 
 set -x
 
+#debug
+hostname
+vmstat
+cat /proc/sys/vm/overcommit_memory
+cat /proc/sys/vm/overcommit_ratio
+cat /proc/sys/vm/swappiness
+cat /proc/meminfo
+
 ################################################################################
 # some logical checks
 
@@ -173,25 +172,25 @@ ses="SSSES"
 ################################################################################
 # setup bids dir structure
 
-rm -rf ${PWD}/${INDIRNAME}/
+rm -rf ${INDIRNAME}/
 
 if [[ ${inWDIR} = "null" ]] ; then
-	rm -rf ${PWD}/${WORKDIRNAME}/
+	rm -rf ${WORKDIRNAME}/
 else
 	# asv for convenience rn
-	cp -as $(readlink -f ${inWDIR}) ${PWD}/${WORKDIRNAME}/ 
+	cp -as $(readlink -f ${inWDIR}) ${WORKDIRNAME}/ 
 fi
 if [[ ${inODIR} = "null" ]] ; then
-	rm -rf ${PWD}/${OUTDIRNAME}/
+	rm -rf ${OUTDIRNAME}/
 else
-	cp -as $(readlink -f ${inODIR}) ${PWD}/${OUTDIRNAME}/
+	cp -as $(readlink -f ${inODIR}) ${OUTDIRNAME}/
 fi
 
 # make input dir
-mkdir ${PWD}/${INDIRNAME}/ 
+mkdir ${INDIRNAME}/ 
 
 # the bids dir will be inside ouf input
-bidsDir=${PWD}/${INDIRNAME}/
+bidsDir=${INDIRNAME}/
 bidsSubDir=${bidsDir}/${bidsSub}/
 
 if [[ ${noSes} = "true" ]] ; then
@@ -202,11 +201,11 @@ fi
 mkdir -p ${bidsSubSesDir}
 
 # working dir
-workdir=${PWD}/${WORKDIRNAME}/
+workdir=${WORKDIRNAME}/
 mkdir -p ${workdir}
 
 # output dir
-outdir=${PWD}/${OUTDIRNAME}/
+outdir=${OUTDIRNAME}/
 mkdir -p ${outdir}
 
 # if freesurfer provided, copy it to the same level as output dir
@@ -255,7 +254,6 @@ if [[ ${inT2w} != "null" ]] ; then
 	cp ${inT2w} ${name_T2w}_T2w.nii.gz
 	jq -r ".meta" ${blJSON_T2w} > ${name_T2w}_T2w.json
 	bids_phaseencode_check ${name_T2w}_T2w.json 
-
 fi
 
 ################################################################################
@@ -385,16 +383,14 @@ fi
 
 if [[ -n ${CMDLINESINGIMG} ]] ; then
 	singIMG=${CMDLINESINGIMG}
-else
-	singIMG=docker://poldracklab/fmriprep:1.3.2
 fi
 
 if [[ -z ${FS_LICENSE} ]] ; then
 	if [[ -n ${FREESURFER_HOME} ]] ; then
 		FS_LICENSE=${FREESURFER_HOME}/license.txt
 	else
-		echo ${FREESURFER_LICENSE} > ${PWD}/.license.txt
-		FS_LICENSE=${PWD}/.license.txt
+		echo ${FREESURFER_LICENSE} > .license.txt
+		FS_LICENSE=.license.txt
 	fi
 fi
 
@@ -421,7 +417,7 @@ exitStatus=$?
 if [[ ${exitStatus} -eq 0 ]] ; then
 	# lets copy specifics out of the workdir
 	
-	bloDir=${PWD}/${DERIVOUTNAME}
+	bloDir=${DERIVOUTNAME}
 
 	# FMRI STUFF
 
@@ -486,8 +482,8 @@ if [[ ${exitStatus} -eq 0 ]] ; then
 fi
 
 # save lots of space
-if [[ -d ${PWD}/${WORKDIRNAME}/ ]] ; then
-    rm -r ${PWD}/${WORKDIRNAME}/
+if [[ -d ${WORKDIRNAME}/ ]] ; then
+    rm -r ${WORKDIRNAME}/
 fi
 
 exit ${exitStatus}
@@ -497,3 +493,4 @@ exit ${exitStatus}
 # !!! let's not retain work dir anymore... !!!
 # fmriprep work dir will be in ${PWD}/${WORKDIRNAME}/
 # specific outputs storred to ${PWD}/${DERIVOUTNAME}/[images]
+

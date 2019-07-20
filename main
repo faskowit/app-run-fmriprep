@@ -1,230 +1,99 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=3:00:00,vmem=30gb
-#PBS -N app-run-fmriprep
+#PBS -l nodes=1:ppn=4,walltime=3:00:00,vmem=30gb
+#PBS -N fmriprep
 
-EXEDIR=$(dirname "$(readlink -f "$0")")/
-source ${EXEDIR}/funcs.sh
+cat <<EOF > multi_proc.yml
+plugin: LegacyMultiProc
+plugin_args: {maxtasksperchild: 1, memory_gb: 28, n_procs: 4, raise_insufficient: false}
+EOF
 
-TESTINGSCRIPT="false"
-TESTINGRUN="false"
-CMDLINESINGIMG=''
+source bids_funcs.sh
 
 #singIMG=docker://poldracklab/fmriprep:1.3.2
 singIMG=docker://poldracklab/fmriprep:1.2.6-1
 
 WORKDIRNAME=fmripworkdir
-OUTDIRNAME=fmripout
+outdir=fmripout
 INDIRNAME=fmripinput
 DERIVOUTNAME=output
-
-cmd_fmrip_globals="--notrack \
-    --resource-monitor \
-    --skip_bids_validation \
-    --stop-on-first-crash \
-    --use-plugin=multi_proc.yml \
-    --output-space fsaverage5 fsnative T1w template \
-    --template-resampling-grid=2mm \
-    --force-bbr \
-    --force-syn \
-    --skull-strip-template=NKI \
-"
-
-cat <<EOF > multi_proc.yml
-plugin: LegacyMultiProc
-plugin_args: {maxtasksperchild: 1, memory_gb: 28, n_procs: 8, raise_insufficient: false}
-EOF
 
 ################################################################################
 # read input from config.json
 # starting off with basic options here
 
-if [[ -f config.json ]] ; then
-	# roll with config.json
-	echo "reading config.json"
-
-	inT1w=`jq -r '.t1' config.json`
-	inT2w=`jq -r '.t2' config.json`
-	inFMRI=`jq -r '.fmri' config.json`
-	inFSDIR=`jq -r '.fsin' config.json`
-	inODIR=`jq -r '.inodir' config.json`
-	inWDIR=`jq -r '.inwdir' config.json`
-
-else
-	echo "reading command line args"
-
-	inT1w="null"
-	inT2w="null"
-	inFMRI="null"
-	inFSDIR="null"
-	inODIR="null"
-	inWDIR="null"
-
-	while [ "$1" != "" ]; do
-	    case $1 in
-	        -t1 | -t1w )           	shift
-	                               	inT1w=$1
-	                          		checkisfile $1
-	                               	;;
-	        -t2 | -t2w )    		shift
-									inT2w=$1
-									checkisfile $1
-	                                ;;
-	        -fmri | -func )    		shift
-									inFMRI=$1
-									checkisfile $1
-	                                ;;
-	        -fs | -freesurfer )		shift
-									inFSDIR=$1
-									checkisdir $1
-	                                ;;
-	        -inodir )				shift
-									inODIR=$1
-									checkisdir $1
-	                                ;;
-	        -inwdir )				shift
-									inWDIR=$1
-									checkisdir $1
-	                                ;;
-	        -img | -sing )			shift
-									CMDLINESINGIMG=$1
-									checkisfile $1
-	                                ;;	        
-	        -testscript )			# no shift needed here
-									TESTINGSCRIPT="true"
-	                                ;;
-	        -testrun )				# no shift needed here
-									TESTINGRUN="true"
-	                                ;;  	                        
-	        -h | --help )           echo "see script"
-	                                exit 1
-	                                ;;
-	        * )                     echo "see script"
-	                                exit 1
-	    esac
-	    shift
-	done
-
-fi
+inT1w=`jq -r '.t1' config.json`
+inT2w=`jq -r '.t2' config.json`
+inFMRI=`jq -r '.fmri' config.json`
+inFSDIR=`jq -r '.fsin' config.json`
+#inODIR=`jq -r '.inodir' config.json`
+#inWDIR=`jq -r '.inwdir' config.json`
 
 set -x
+set -e
 
 #debug
-hostname
-vmstat
-cat /proc/sys/vm/overcommit_memory
-cat /proc/sys/vm/overcommit_ratio
-cat /proc/sys/vm/swappiness
-cat /proc/meminfo
+#hostname
+#vmstat
+#cat /proc/sys/vm/overcommit_memory
+#cat /proc/sys/vm/overcommit_ratio
+#cat /proc/sys/vm/swappiness
+#cat /proc/meminfo
 
-################################################################################
 # some logical checks
-
-if [[ ${inT1w} = "null" ]] || [[ ${inFMRI} = "null" ]] ; then
+if [[ $inT1w = "null" ]] || [[ $inFMRI = "null" ]] ; then
 	echo "app needs minimally a T1w and fmri. exiting"
 	exit 1
 fi
 
-#if [[ ${inFMAP} != "null" ]] && [[ ${inFMRI} = "null" ]] ; then
-#	echo "need fmri for fmap. exiting"
-#	exit 1
-#fi
-
-################################################################################
 # extract info from brainlife interface, base on T1w
-
 # get the staging dir, this is where meta information is 
-stagingDir=$(dirname ${inT1w})
+stagingDir=$(dirname $inT1w)
 echo "ls dir where initial bl info read--> $stagingDir"
-ls -dl ${stagingDir}
+ls -dl $stagingDir
 
-[[ ${stagingDir} = "." ]] && \
-	{ echo "error finding staging directory. exiting" ; exit 1 ; }
-
-# once we have the staging directory, we can extract some info 
-#blJSON=${stagingDir}/.brainlife.json
-#ls -al ${blJSON}
-#[[ ! -f ${blJSON} ]] && \
-#	{ echo "error finding blJSON" ;
-#	echo "blJSON: ${blJSON}" ;
-#	echo "staging dir: ${stagingDir}" ;
-#	exit 1 ; }
+if [[ $stagingDir = "." ]]; then
+   echo "error finding staging directory. exiting"
+   exit 1
+fi
 
 jq '._inputs[] | select(.id == "t1w")' config.json > t1w.json
 blJSON=t1w.json
-
-# get the subject
-#sub=$(jq -r ".meta.subject" ${blJSON} )
-#[[ ${sub} = "null" ]] && \
-#	{ echo "error finding sub" ; exit 1 ; }
-#bidsSub="sub-$sub"
-# for now, just use fake subject name
 bidsSub="sub-TTTEMPSUB"
-
-#ses=$(jq -r ".meta.session" ${blJSON} )
-#noSes="false"
-#if [[ ${ses} = "null" ]] ; then
-#	# lets handle this
-#	ses=''
-#	noSes="true"
-#fi
 noSes="false"
 ses="SSSES"
 
 ################################################################################
 # setup bids dir structure
 
-rm -rf ${INDIRNAME}/
-
-if [[ ${inWDIR} = "null" ]] ; then
-	rm -rf ${WORKDIRNAME}/
-else
-	# asv for convenience rn
-	cp -as $(readlink -f ${inWDIR}) ${WORKDIRNAME}/ 
-fi
-if [[ ${inODIR} = "null" ]] ; then
-	rm -rf ${OUTDIRNAME}/
-else
-	cp -as $(readlink -f ${inODIR}) ${OUTDIRNAME}/
-fi
-
-# make input dir
-mkdir ${INDIRNAME}/ 
+rm -rf $INDIRNAME && mkdir -p $INDIRNAME
+rm -rf $WORKDIRNAME && mkdir -p $WORKDIRNAME
+rm -rf $outdir && mkdir -p $outdir
 
 # the bids dir will be inside ouf input
-bidsDir=${INDIRNAME}/
-bidsSubDir=${bidsDir}/${bidsSub}/
+bidsDir=$INDIRNAME
+bidsSubDir=$bidsDir/$bidsSub
 
 if [[ ${noSes} = "true" ]] ; then
-	bidsSubSesDir=${bidsSubDir}/
+	bidsSubSesDir=$bidsSubDir
 else
-	bidsSubSesDir=${bidsSubDir}/ses-${ses}/
+	bidsSubSesDir=$bidsSubDir/ses-$ses
 fi
-mkdir -p ${bidsSubSesDir}
-
-# working dir
-workdir=${WORKDIRNAME}/
-mkdir -p ${workdir}
-
-# output dir
-outdir=${OUTDIRNAME}/
-mkdir -p ${outdir}
+mkdir -p $bidsSubSesDir
 
 # if freesurfer provided, copy it to the same level as output dir
-if [[ ${inFSDIR} != "null" ]] ; then
+if [[ $inFSDIR != "null" ]] ; then
 
-	mkdir -p ${outdir}/freesurfer/
+	mkdir -p $outdir/freesurfer
 
 	# dont know if dir will be just inFSDIR or inFSDIR/output
-	if [[ -d ${inFSDIR}/output ]] ; then
-		cp -rv ${inFSDIR}/output/ ${outdir}/freesurfer/${bidsSub}/
+	if [[ -d $inFSDIR/output ]] ; then
+		cp -rv $inFSDIR/output $outdir/freesurfer/$bidsSub
 	else
-		cp -rv ${inFSDIR} ${outdir}/freesurfer/${bidsSub}/
+		cp -rv $inFSDIR $outdir/freesurfer/$bidsSub
 	fi
 fi
 
-# save a dataset description
-
-cat > ${bidsDir}/dataset_description.json << 'BIDSDESCRIPT'
+cat > $bidsDir/dataset_description.json << 'BIDSDESCRIPT'
 {
     "Name": "temp",
     "BIDSVersion": "1.0.0"
@@ -234,43 +103,40 @@ BIDSDESCRIPT
 ################################################################################
 # T1w 
 
-mkdir -p ${bidsSubSesDir}/anat
-#blJSON_T1w=$(dirname ${inT1w})/.brainlife.json
+mkdir -p $bidsSubSesDir/anat
 blJSON_T1w=t1w.json
-name_T1w="${bidsSubSesDir}/anat/${bidsSub}"
-name_T1w=$(bids_namekeyvals ${name_T1w} ${blJSON_T1w} "acq ce rec run" ${ses} )
-cp ${inT1w} ${name_T1w}_T1w.nii.gz
-jq -r ".meta" ${blJSON_T1w} > ${name_T1w}_T1w.json
+name_T1w=$bidsSubSesDir/anat/$bidsSub
+name_T1w=$(bids_namekeyvals $name_T1w $blJSON_T1w "acq ce rec run" $ses )
+cp $inT1w ${name_T1w}_T1w.nii.gz
+jq -r ".meta" $blJSON_T1w > ${name_T1w}_T1w.json
 bids_phaseencode_check ${name_T1w}_T1w.json
 
 ################################################################################
 # T2w 
 
-if [[ ${inT2w} != "null" ]] ; then
+if [[ $inT2w != "null" ]] ; then
 	jq '._inputs[] | select(.id == "t2w")' config.json > t2w.json
 	blJSON_T2w=t2w.json
-	#blJSON_T2w=$(dirname ${inT2w})/.brainlife.json
-	name_T2w="${bidsSubSesDir}/anat/${bidsSub}"
-	name_T2w=$(bids_namekeyvals ${name_T2w} ${blJSON_T2w} "acq ce rec run" ${ses} )
-	cp ${inT2w} ${name_T2w}_T2w.nii.gz
-	jq -r ".meta" ${blJSON_T2w} > ${name_T2w}_T2w.json
+	name_T2w=$bidsSubSesDir/anat/$bidsSub
+	name_T2w=$(bids_namekeyvals $name_T2w $blJSON_T2w "acq ce rec run" $ses )
+	cp $inT2w ${name_T2w}_T2w.nii.gz
+	jq -r ".meta" $blJSON_T2w > ${name_T2w}_T2w.json
 	bids_phaseencode_check ${name_T2w}_T2w.json 
 fi
 
 ################################################################################
 # FMRI
 
-if [[ ${inFMRI} != "null" ]] ; then
+if [[ $inFMRI != "null" ]] ; then
 
-	mkdir -p ${bidsSubSesDir}/func/
+	mkdir -p $bidsSubSesDir/func
 	jq '._inputs[] | select(.id == "fmri")' config.json > fmri.json
-	#blJSON_FMRI=$(dirname ${inFMRI})/.brainlife.json
 	blJSON_FMRI=fmri.json
 	# fmri needs task in the filename to be defined!
-	name_FMRI="${bidsSubSesDir}/func/${bidsSub}"
-	name_FMRI=$(bids_namekeyvals ${name_FMRI} ${blJSON_FMRI} "task acq ce dir rec run echo" ${ses} )
-	cp ${inFMRI} ${name_FMRI}_bold.nii.gz
-	jq -r ".meta" ${blJSON_FMRI} > ${name_FMRI}_bold.json
+	name_FMRI=$bidsSubSesDir/func/$bidsSub
+	name_FMRI=$(bids_namekeyvals $name_FMRI $blJSON_FMRI "task acq ce dir rec run echo" $ses )
+	cp $inFMRI ${name_FMRI}_bold.nii.gz
+	jq -r ".meta" $blJSON_FMRI > ${name_FMRI}_bold.json
 	bids_phaseencode_check ${name_FMRI}_bold.json 
 
 fi
@@ -281,7 +147,7 @@ fi
 jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 if [ -s fmap.json ]; then
 
-	mkdir -p ${bidsSubSesDir}/fmap/
+	mkdir -p $bidsSubSesDir/fmap
 
 	# the fmri that the fmap is for
 	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,')
@@ -297,56 +163,57 @@ if [ -s fmap.json ]; then
     #magnitude2.nii.gz/json
     if [ -f $(jq -r .phasediff config.json) ] ; then
 
-		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-		name_FMAP=$(bids_namekeyvals ${name_FMAP} fmap.json "acq run" ${ses} )
+		name_FMAP=$bidsSubSesDir/fmap/$bidsSub
+		name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq run" $ses )
 
 		# fmap actually has a few things associated with it, hence need to copy 
 		# over additional stuff: fmap is actually:
 		# phasediff.nii.gz, phasediff.json, 
 		# and magnitude files
 
-		rawPhaseDiff=${fmapDir}/phasediff.nii.gz
-		rawMagnitudes=($(ls -v ${fmapDir}/*magnitude*nii.gz))
+		rawPhaseDiff=$fmapDir/phasediff.nii.gz
+		rawMagnitudes=($(ls -v $fmapDir/*magnitude*nii.gz))
 
-		cp ${rawPhaseDiff} ${name_FMAP}_phasediff.nii.gz
+		cp $rawPhaseDiff ${name_FMAP}_phasediff.nii.gz
 		# replacing (or setting), the intended for category
-		jq -r '.meta | .IntendedFor="'${relFMRI}'"' fmap.json > ${name_FMAP}_phasediff.json
+		jq -r '.meta | .IntendedFor="'$relFMRI'"' fmap.json > ${name_FMAP}_phasediff.json
 
 		for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
-			cp ${rawMagnitudes[${idx}]} ${name_FMAP}_magnitude$((idx+1)).nii.gz
+			cp ${rawMagnitudes[$idx]} ${name_FMAP}_magnitude$((idx+1)).nii.gz
             #TODO - what about _magnitue1/2.json?
 		done
 
 		bids_phaseencode_check ${name_FMAP}_phasediff.json 
 
-    ############ fmap / 2phasemag
-    #phase1.nii.gz / json
-    #phase2.nii.gz / json
-    #magnitude1.nii.gz /json
-    #magnitude2.nii.gz / json
-    #TODO..
+        ############ fmap / 2phasemag
+        #phase1.nii.gz / json
+        #phase2.nii.gz / json
+        #magnitude1.nii.gz /json
+        #magnitude2.nii.gz / json
+        #TODO..
 
-    ############ fmap / real
-    #fieldmap.nii.gz / json
-    #magnitude.nii.gz
-    #TODO.
+        ############ fmap / real
+        #fieldmap.nii.gz / json
+        #magnitude.nii.gz
+        #TODO.
 
-    ############ fmap / epi
-    #N.epi.nii.gz /json
+        ############ fmap / epi
+        #N.epi.nii.gz /json
+
     elif [ -f $(jq -r .ap config.json) ] ; then
 
-		name_FMAP="${bidsSubSesDir}/fmap/${bidsSub}"
-		name_FMAP=$(bids_namekeyvals ${name_FMAP} fmap.json "acq ce dir run" ${ses} )
+		name_FMAP=$bidsSubSesDir/fmap/$bidsSub
+		name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq ce dir run" $ses )
 
-		# get just the direction value from the .brainlife json
+		# get just the direction value
 		dirval=$(bids_namekeyvals "YO" fmap.json "dir" )
-		dirval=$(echo ${dirval} | sed s,YO_dir-,,)
+		dirval=$(echo $dirval | sed s,YO_dir-,,)
 
 		# now make the name for 1 and 2
-		name_FMAP_1=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-1, )
-		name_FMAP_2=$(echo ${name_FMAP} | sed s,dir-${dirval},dir-2, )
+		name_FMAP_1=$(echo $name_FMAP | sed s,dir-$dirval,dir-1, )
+		name_FMAP_2=$(echo $name_FMAP | sed s,dir-$dirval,dir-2, )
 
-		imgs=($(ls ${fmapDir}/*epi*nii.gz ))
+		imgs=($(ls $fmapDir/*epi*nii.gz ))
 		# if there aren't exactly two images read
 		if [[ ${#imgs[@]} -ne 2 ]] ; then
 			echo "did not read to images for fmap. exiting"
@@ -361,10 +228,8 @@ if [ -s fmap.json ]; then
 		cp ${json1} ${name_FMAP_1}_epi.tmp.json
 		cp ${json2} ${name_FMAP_2}_epi.tmp.json
 
-		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_1}_epi.tmp.json \
-			> ${name_FMAP_1}_epi.json
-		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_2}_epi.tmp.json \
-			> ${name_FMAP_2}_epi.json
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_1}_epi.tmp.json > ${name_FMAP_1}_epi.json
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_2}_epi.tmp.json > ${name_FMAP_2}_epi.json
 
 		rm ${name_FMAP_1}_epi.tmp.json
 		rm ${name_FMAP_2}_epi.tmp.json
@@ -379,115 +244,93 @@ if [ -s fmap.json ]; then
 
 fi
 
-################################################################################
-# runit
+echo $FREESURFER_LICENSE > .license.txt
 
-if [[ -n ${CMDLINESINGIMG} ]] ; then
-	singIMG=${CMDLINESINGIMG}
+###################################################################################################
+#
+# singularity
+#
+singularity run --cleanenv $singIMG \
+    --notrack \
+    --resource-monitor \
+    --skip_bids_validation \
+    --stop-on-first-crash \
+    --use-plugin=multi_proc.yml \
+    --output-space fsaverage5 fsnative T1w template \
+    --template-resampling-grid=2mm \
+    --force-bbr \
+    --force-syn \
+    --fs-license-file=.license.txt \
+    --skull-strip-template=NKI \
+    --work-dir=$WORKDIRNAME \
+    --participant_label=$bidsSub \
+    $bidsDir $outdir participant
+
+# lets copy specifics out of the workdir
+bloDir=$DERIVOUTNAME
+
+# FMRI STUFF
+
+# get basename
+inFMRI=${name_FMRI}_bold.nii.gz
+
+if [[ ${noSes} = "true" ]] ; then
+    oDirFunc=${outdir}/fmriprep/${bidsSub}/func/
+else
+    oDirFunc=${outdir}/fmriprep/${bidsSub}/ses-${ses}/func/
 fi
 
-if [[ -z ${FS_LICENSE} ]] ; then
-	if [[ -n ${FREESURFER_HOME} ]] ; then
-		FS_LICENSE=${FREESURFER_HOME}/license.txt
-	else
-		echo ${FREESURFER_LICENSE} > .license.txt
-		FS_LICENSE=.license.txt
-	fi
+outBase="${oDirFunc}/$(basename $(echo ${inFMRI} | sed s,_bold.nii.gz,, ))"
+
+# get the preproc fmri vol
+tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
+mkdir -p ${bloDir}_bold/
+cp -v ${tmp} ${bloDir}_bold/bold.nii.gz
+
+# get the preproc fmri volmask
+tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
+mkdir ${bloDir}_boldmask/
+cp -v ${tmp} ${bloDir}_boldmask/mask.nii.gz
+
+# get the confounds
+tmp=${outBase}_desc-confounds_regressors.tsv
+mkdir -p ${bloDir}_regress/
+cp -v ${tmp} ${bloDir}_regress/regressors.tsv
+
+# get the native preproc fmri surf
+#tmp=${outBase}_space-fsnative_hemi-L.func.gii
+#cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
+#tmp=${outBase}_space-fsnative_hemi-R.func.gii
+#cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
+
+# get the fsaverage5 preproc fmri surf
+#tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
+#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
+#tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
+#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
+
+# ANAT STUFF
+inT1w=${name_T1w}_T1w.nii.gz
+
+if [[ ${noSes} = "true" ]] ; then
+    oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
+else
+    oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
 fi
 
-cmd="singularity run --cleanenv \
-		${singIMG} \
-		${cmd_fmrip_globals} \
-		--fs-license-file=${FS_LICENSE} \
-		--work-dir=${workdir} \
-		--participant_label=${bidsSub} \
-		${bidsDir} ${outdir} participant \
-    "
-if [[ ${TESTINGRUN} = "true" ]] ; then
-	cmd="${cmd} --sloppy" 
-fi
+outBase="${oDirAnat}/${bidsSub}"
 
-echo $cmd
-if [[ ${TESTINGSCRIPT} = "false" ]] ; then
-	eval $cmd
-fi
+# get the preproc fmri vol
+tmp=${outBase}_desc-preproc_T1w.nii.gz
+mkdir -p ${bloDir}_t1/
+cp -v ${tmp} ${bloDir}_t1/t1.nii.gz
 
-#exit code from the last command (singularity) will be used.
-exitStatus=$?
-
-if [[ ${exitStatus} -eq 0 ]] ; then
-	# lets copy specifics out of the workdir
-	
-	bloDir=${DERIVOUTNAME}
-
-	# FMRI STUFF
-
-	# get basename
-	inFMRI=${name_FMRI}_bold.nii.gz
-
-	if [[ ${noSes} = "true" ]] ; then
-		oDirFunc=${outdir}/fmriprep/${bidsSub}/func/
-	else
-		oDirFunc=${outdir}/fmriprep/${bidsSub}/ses-${ses}/func/
-	fi
-
-	outBase="${oDirFunc}/$(basename $(echo ${inFMRI} | sed s,_bold.nii.gz,, ))"
-
-	# get the preproc fmri vol
-	tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
-	mkdir -p ${bloDir}_bold/
-	cp -v ${tmp} ${bloDir}_bold/bold.nii.gz
-
-	# get the preproc fmri volmask
-	tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
-	mkdir ${bloDir}_boldmask/
-	cp -v ${tmp} ${bloDir}_boldmask/mask.nii.gz
-
-	# get the confounds
-	tmp=${outBase}_desc-confounds_regressors.tsv
-	mkdir -p ${bloDir}_regress/
-	cp -v ${tmp} ${bloDir}_regress/regressors.tsv
-
-	# get the native preproc fmri surf
-	#tmp=${outBase}_space-fsnative_hemi-L.func.gii
-	#cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
-	#tmp=${outBase}_space-fsnative_hemi-R.func.gii
-	#cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
-
-	# get the fsaverage5 preproc fmri surf
-	#tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
-	#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
-	#tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
-	#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
-
-	# ANAT STUFF
-	inT1w=${name_T1w}_T1w.nii.gz
-
-	if [[ ${noSes} = "true" ]] ; then
-		oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
-	else
-		oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
-	fi
-
-	outBase="${oDirAnat}/${bidsSub}"
-
-	# get the preproc fmri vol
-	tmp=${outBase}_desc-preproc_T1w.nii.gz
-	mkdir -p ${bloDir}_t1/
-	cp -v ${tmp} ${bloDir}_t1/t1.nii.gz
-
-	tmp=${outBase}_desc-brain_mask.nii.gz
-	mkdir -p ${bloDir}_t1mask/
-	cp -v ${tmp} ${bloDir}_t1mask/mask.nii.gz
-
-fi
+tmp=${outBase}_desc-brain_mask.nii.gz
+mkdir -p ${bloDir}_t1mask/
+cp -v ${tmp} ${bloDir}_t1mask/mask.nii.gz
 
 # save lots of space
-if [[ -d ${WORKDIRNAME}/ ]] ; then
-    rm -r ${WORKDIRNAME}/
-fi
-
-exit ${exitStatus}
+rm -r $WORKDIRNAME
 
 # fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
 # fmriprep output will be in ${PWD}/${OUTDIRNAME}/

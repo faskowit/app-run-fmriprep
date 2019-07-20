@@ -2,15 +2,17 @@
 #PBS -l nodes=1:ppn=4,walltime=3:00:00,vmem=30gb
 #PBS -N fmriprep
 
+set -x
+set -e
+
+#write out *plugin* configuration for fmriprep to limit mem/cpus
+#this can't prevent the fmriprep/nipype bootup vmem spiking (could kill the job)
 cat <<EOF > multi_proc.yml
 plugin: LegacyMultiProc
 plugin_args: {maxtasksperchild: 1, memory_gb: 28, n_procs: 4, raise_insufficient: false}
 EOF
 
 source bids_funcs.sh
-
-#singIMG=docker://poldracklab/fmriprep:1.3.2
-singIMG=docker://poldracklab/fmriprep:1.2.6-1
 
 WORKDIRNAME=fmripworkdir
 outdir=fmripout
@@ -27,9 +29,6 @@ inFMRI=`jq -r '.fmri' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
 #inODIR=`jq -r '.inodir' config.json`
 #inWDIR=`jq -r '.inwdir' config.json`
-
-set -x
-set -e
 
 #debug
 #hostname
@@ -59,7 +58,6 @@ fi
 jq '._inputs[] | select(.id == "t1w")' config.json > t1w.json
 blJSON=t1w.json
 bidsSub="sub-TTTEMPSUB"
-noSes="false"
 ses="SSSES"
 
 ################################################################################
@@ -72,15 +70,11 @@ rm -rf $outdir && mkdir -p $outdir
 # the bids dir will be inside ouf input
 bidsDir=$INDIRNAME
 bidsSubDir=$bidsDir/$bidsSub
-
-if [[ ${noSes} = "true" ]] ; then
-	bidsSubSesDir=$bidsSubDir
-else
-	bidsSubSesDir=$bidsSubDir/ses-$ses
-fi
+bidsSubSesDir=$bidsSubDir/ses-$ses
 mkdir -p $bidsSubSesDir
 
 # if freesurfer provided, copy it to the same level as output dir
+# TODO why can't we just symlink this in?
 if [[ $inFSDIR != "null" ]] ; then
 
 	mkdir -p $outdir/freesurfer
@@ -248,9 +242,9 @@ echo $FREESURFER_LICENSE > .license.txt
 
 ###################################################################################################
 #
-# singularity
+# run fmriprep!
 #
-singularity run --cleanenv $singIMG \
+time singularity run --cleanenv docker://poldracklab/fmriprep:1.2.6-1 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \
@@ -266,75 +260,52 @@ singularity run --cleanenv $singIMG \
     --participant_label=$bidsSub \
     $bidsDir $outdir participant
 
+echo "done with fmriprep! - now organizing output"
+
 # lets copy specifics out of the workdir
 bloDir=$DERIVOUTNAME
 
-# FMRI STUFF
+#####################################################################################
+#
 
 # get basename
 inFMRI=${name_FMRI}_bold.nii.gz
-
-if [[ ${noSes} = "true" ]] ; then
-    oDirFunc=${outdir}/fmriprep/${bidsSub}/func/
-else
-    oDirFunc=${outdir}/fmriprep/${bidsSub}/ses-${ses}/func/
-fi
-
-outBase="${oDirFunc}/$(basename $(echo ${inFMRI} | sed s,_bold.nii.gz,, ))"
+oDirFunc=$outdir/fmriprep/$bidsSub/ses-${ses}/func/
+outBase="$oDirFunc/$(basename $(echo $inFMRI | sed s,_bold.nii.gz,, ))"
 
 # get the preproc fmri vol
 tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
-mkdir -p ${bloDir}_bold/
-cp -v ${tmp} ${bloDir}_bold/bold.nii.gz
+mkdir -p ${bloDir}_bold
+cp -v $tmp ${bloDir}_bold/bold.nii.gz
 
 # get the preproc fmri volmask
 tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
-mkdir ${bloDir}_boldmask/
-cp -v ${tmp} ${bloDir}_boldmask/mask.nii.gz
+mkdir ${bloDir}_boldmask
+cp -v $tmp ${bloDir}_boldmask/mask.nii.gz
 
 # get the confounds
 tmp=${outBase}_desc-confounds_regressors.tsv
-mkdir -p ${bloDir}_regress/
-cp -v ${tmp} ${bloDir}_regress/regressors.tsv
+mkdir -p ${bloDir}_regress
+cp -v $tmp ${bloDir}_regress/regressors.tsv
 
-# get the native preproc fmri surf
-#tmp=${outBase}_space-fsnative_hemi-L.func.gii
-#cp ${tmp} ${bloDir}/space-fsnative_hemi-L.func.gii
-#tmp=${outBase}_space-fsnative_hemi-R.func.gii
-#cp ${tmp} ${bloDir}/space-fsnative_hemi-R.func.gii
-
-# get the fsaverage5 preproc fmri surf
-#tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
-#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-L.func.gii
-#tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
-#cp ${tmp} ${bloDir}/space-fsaverage5_hemi-R.func.gii
-
+#####################################################################################
+#
 # ANAT STUFF
-inT1w=${name_T1w}_T1w.nii.gz
 
-if [[ ${noSes} = "true" ]] ; then
-    oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
-else
-    oDirAnat=${outdir}/fmriprep/${bidsSub}/anat/
-fi
-
-outBase="${oDirAnat}/${bidsSub}"
+#inT1w=${name_T1w}_T1w.nii.gz
+oDirAnat=$outdir/fmriprep/$bidsSub/anat/
+outBase=$oDirAnat/$bidsSub
 
 # get the preproc fmri vol
 tmp=${outBase}_desc-preproc_T1w.nii.gz
 mkdir -p ${bloDir}_t1/
-cp -v ${tmp} ${bloDir}_t1/t1.nii.gz
+cp -v $tmp ${bloDir}_t1/t1.nii.gz
 
 tmp=${outBase}_desc-brain_mask.nii.gz
 mkdir -p ${bloDir}_t1mask/
-cp -v ${tmp} ${bloDir}_t1mask/mask.nii.gz
+cp -v $tmp ${bloDir}_t1mask/mask.nii.gz
 
 # save lots of space
 rm -r $WORKDIRNAME
 
-# fake input bids dir will be in ${PWD}/${INDIRNAME}/${bidsSub}/
-# fmriprep output will be in ${PWD}/${OUTDIRNAME}/
-# !!! let's not retain work dir anymore... !!!
-# fmriprep work dir will be in ${PWD}/${WORKDIRNAME}/
-# specific outputs storred to ${PWD}/${DERIVOUTNAME}/[images]
-
+echo "all done"

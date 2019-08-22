@@ -104,6 +104,7 @@ name_T1w=$(bids_namekeyvals $name_T1w $blJSON_T1w "acq ce rec run" $ses )
 cp $inT1w ${name_T1w}_T1w.nii.gz
 jq -r ".meta" $blJSON_T1w > ${name_T1w}_T1w.json
 bids_phaseencode_check ${name_T1w}_T1w.json
+rm ${name_T1w}_T1w.json
 
 ################################################################################
 # T2w 

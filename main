@@ -104,7 +104,6 @@ name_T1w=$(bids_namekeyvals $name_T1w $blJSON_T1w "acq ce rec run" $ses )
 cp $inT1w ${name_T1w}_T1w.nii.gz
 jq -r ".meta" $blJSON_T1w > ${name_T1w}_T1w.json
 bids_phaseencode_check ${name_T1w}_T1w.json
-rm ${name_T1w}_T1w.json
 
 ################################################################################
 # T2w 
@@ -245,7 +244,7 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
-time singularity run --cleanenv docker://poldracklab/fmriprep:1.2.6-1 \
+time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0rc2 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

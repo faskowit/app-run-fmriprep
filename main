@@ -24,7 +24,7 @@ cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
 cat tmp.json | jq '._inputs[].meta.run="1"' > tmp3.json
 
 cat tmp3.json | jq '._inputs[].meta.task="task"' > tmp4.json
-cat tmp4.json | jq '._outputs[].meta.task="task"' > tmp5.json
+cat tmp4.json | jq '._outputs[].meta.task="task"' > tmp2.json
 
 
 mv tmp2.json config.json && rm tmp.json
@@ -254,14 +254,6 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
-export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/.cache/templateflow
-echo relative_path
-echo $bidsSub
-echo $bidsDir
-echo $outdir
-echo $WORKDIRNAME
-pwd
-
 time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0rc2 \
     --notrack \
     --resource-monitor \

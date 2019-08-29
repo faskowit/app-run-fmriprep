@@ -25,6 +25,12 @@ cat tmp.json | jq '._inputs[].meta.run="1"' > tmp2.json
 mv tmp2.json config.json && rm tmp.json
 
 echo $HOME
+ls $HOME/.cache
+echo $Home/.cache
+ls /home/
+echo /home/
+ls /home/.cache
+echo /home/.cache...
 
 ################################################################################
 # read input from config.json

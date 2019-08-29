@@ -21,6 +21,7 @@ DERIVOUTNAME=output
 
 # manually change "subject" in config.json to "TTTEMPSUB" to work with fMRIPrep
 cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
+cat tmp.json | jq '._inputs[].meta.run="1"' > tmp.json
 mv tmp.json config.json
 
 ################################################################################

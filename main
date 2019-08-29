@@ -19,6 +19,10 @@ outdir=fmripout
 INDIRNAME=fmripinput
 DERIVOUTNAME=output
 
+# manually change "subject" in config.json to "TTTEMPSUB" to work with fMRIPrep
+cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
+mv tmp.json config.json
+
 ################################################################################
 # read input from config.json
 # starting off with basic options here

@@ -259,6 +259,7 @@ echo relative_path
 echo $bidsSub
 echo $bidsDir
 echo $outdir
+echo $WORKDIRNAME
 pwd
 
 time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0rc2 \

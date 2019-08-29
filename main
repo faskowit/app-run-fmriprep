@@ -24,6 +24,8 @@ cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
 cat tmp.json | jq '._inputs[].meta.run="1"' > tmp2.json
 mv tmp2.json config.json && rm tmp.json
 
+echo $HOME
+
 ################################################################################
 # read input from config.json
 # starting off with basic options here

@@ -23,8 +23,8 @@ DERIVOUTNAME=output
 cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
 cat tmp.json | jq '._inputs[].meta.run="1"' > tmp3.json
 
-cat tmp3.json | jq '._inputs[].meta.task="task"' > tmp4.json
-cat tmp4.json | jq '._outputs[].meta.task="task"' > tmp2.json
+cat tmp3.json | jq '._inputs[].meta.task="tsk"' > tmp4.json
+cat tmp4.json | jq '._outputs[].meta.task="tsk"' > tmp2.json
 
 
 mv tmp2.json config.json && rm tmp.json

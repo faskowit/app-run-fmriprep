@@ -144,8 +144,8 @@ fi
 ################################################################################
 # FMAP
 
-jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
-if [ -s fmap.json ]; then
+if [ $(jq .fmap config.json) != "null" ]; then
+    jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
 	mkdir -p $bidsSubSesDir/fmap
 
@@ -250,6 +250,7 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
+
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/.cache/templateflow
 
 time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
@@ -258,8 +259,7 @@ time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-space fsaverage5 fsnative T1w template \
-    --template-resampling-grid=2mm \
+    --output-spaces fsaverage5:res-2mm fsnative:res-2mm T1w:res-2mm template:res-2mm \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \
@@ -267,6 +267,8 @@ time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --work-dir=$WORKDIRNAME \
     --participant_label=$bidsSub \
     $bidsDir $outdir participant
+
+#--template-resampling-grid=2mm \
 
 echo "done with fmriprep! - now organizing output"
 

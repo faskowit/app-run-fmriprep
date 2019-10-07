@@ -19,6 +19,12 @@ outdir=fmripout
 INDIRNAME=fmripinput
 DERIVOUTNAME=output
 
+# manually change "subject" in config.json to "TTTEMPSUB" to work with fMRIPrep
+cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp.json
+cat tmp.json | jq '._inputs[].meta.run="1"' > tmp2.json
+
+mv tmp2.json config.json && rm tmp.json
+
 ################################################################################
 # read input from config.json
 # starting off with basic options here
@@ -244,8 +250,10 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
-#time singularity run --cleanenv docker://poldracklab/fmriprep:1.2.6-1 \
-time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0rc1 \
+
+#export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/.cache/templateflow
+
+time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

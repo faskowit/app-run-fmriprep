@@ -251,14 +251,10 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
-<<<<<<< HEAD
+
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/.cache/templateflow
 
 time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
-=======
-#time singularity run --cleanenv docker://poldracklab/fmriprep:1.2.6-1 \
-time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0rc1 \
->>>>>>> 0958dda0d8368f7de4e90f7c973de5ed5100f109
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

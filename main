@@ -251,9 +251,9 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
-export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/Downloads/templateflow
+export SINGULARITYENV_TEMPLATEFLOW_HOME=/opt/templateflow
 
-time singularity run --home $HOME --cleanenv docker://poldracklab/fmriprep:1.5.0 \
+time singularity run --B /N/u/davhunt/Carbonate/Downloads/.cache/templateflow:/opt/templateflow --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

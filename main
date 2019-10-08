@@ -253,7 +253,7 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 export SINGULARITYENV_TEMPLATEFLOW_HOME=/opt/templateflow
 
-time singularity run --B /N/u/davhunt/Carbonate/Downloads/.cache/templateflow:/opt/templateflow --cleanenv docker://poldracklab/fmriprep:1.5.0 \
+time singularity run --cleanenv -B /N/u/davhunt/Carbonate/Downloads/.cache/templateflow:/opt/templateflow docker://poldracklab/fmriprep:1.5.0 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

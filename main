@@ -260,8 +260,7 @@ time singularity run --cleanenv -B /N/u/davhunt/Carbonate/Downloads/.cache/templ
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-space fsaverage5 fsnative T1w template \
-    --template-resampling-grid=2mm \
+    --output-spaces fsaverage5:res-2mm fsnative:res-2mm T1w:res-2mm template:res-2mm \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \

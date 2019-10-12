@@ -260,7 +260,7 @@ time singularity run --cleanenv -B /N/u/davhunt/Carbonate/Downloads/.cache/templ
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces MNI152NLin2009cAsym:res-2 T1w \
+    --output-spaces MNI152NLin2009cAsym:res-2 T1w:res-2 --use-syn-sdc \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \

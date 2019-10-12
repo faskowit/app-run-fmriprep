@@ -263,7 +263,7 @@ time singularity run --cleanenv -B /N/u/davhunt/Carbonate/Downloads/.cache/templ
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces "${out_spaces[@]}" \
+    --output-spaces ${out_spaces[@]} \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \

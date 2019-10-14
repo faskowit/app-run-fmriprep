@@ -146,7 +146,7 @@ fi
 ################################################################################
 # FMAP
 
-if [ $(jq .fmap config.json) != "null" ]; then
+if [ $(jq .fieldmap config.json) != "null" ]; then
     jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
 	mkdir -p $bidsSubSesDir/fmap

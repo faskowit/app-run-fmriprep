@@ -146,7 +146,7 @@ fi
 ################################################################################
 # FMAP
 
-if [ $(jq .fmap config.json) != "null" ]; then
+if [ $(jq .fieldmap config.json) != "null" ]; then
     jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
 	mkdir -p $bidsSubSesDir/fmap
@@ -254,10 +254,11 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 IFS=', ' read -r -a out_spaces <<< "$outSPACES"
 
-export SINGULARITYENV_TEMPLATEFLOW_HOME=/opt/templateflow
+mkdir -p templateflow
+export SINGULARITYENV_TEMPLATEFLOW_HOME=/$PWD/templateflow
 
 #time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
-time singularity run --cleanenv -B /N/u/davhunt/Carbonate/Downloads/.cache/templateflow:/opt/templateflow docker://poldracklab/fmriprep:1.5.0 \
+time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=3:00:00,vmem=30gb
+#PBS -l nodes=1:ppn=8,walltime=4:00:00,vmem=30gb
 #PBS -N fmriprep
 
 set -x
@@ -20,6 +20,7 @@ INDIRNAME=fmripinput
 DERIVOUTNAME=output
 
 # manually change "subject" in config.json to "TTTEMPSUB" to work with fMRIPrep
+
 cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp1.json
 cat tmp1.json | jq '._inputs[].meta.session="SSSES"' > tmp2.json
 cat tmp2.json | jq '._inputs[].meta.run="1"' > tmp3.json
@@ -34,6 +35,7 @@ inT1w=`jq -r '.t1' config.json`
 inT2w=`jq -r '.t2' config.json`
 inFMRI=`jq -r '.fmri' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
+outSPACES=`jq -r '.output_spaces' config.json`
 #inODIR=`jq -r '.inodir' config.json`
 #inWDIR=`jq -r '.inwdir' config.json`
 
@@ -145,7 +147,7 @@ fi
 ################################################################################
 # FMAP
 
-if [ $(jq .fmap config.json) != "null" ]; then
+if [ $(jq .fieldmap config.json) != "null" ]; then
     jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
 	mkdir -p $bidsSubSesDir/fmap
@@ -251,8 +253,8 @@ echo $FREESURFER_LICENSE > .license.txt
 #
 # run fmriprep!
 #
+IFS=', ' read -r -a out_spaces <<< "$outSPACES"
 
-#export SINGULARITYENV_TEMPLATEFLOW_HOME=$HOME/.cache/templateflow
 mkdir -p templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 
@@ -262,7 +264,7 @@ time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces fsaverage5:res-2mm fsnative:res-2mm T1w:res-2mm template:res-2mm \
+    --output-spaces ${out_spaces[@]} \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \

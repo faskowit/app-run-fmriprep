@@ -37,15 +37,10 @@ inFMRI=`jq -r '.fmri' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
 
 # templates to be resampled to
-out_template_1=`jq -r '.T1w_res_2' config.json`
-out_template_2=`jq -r '.MNI152NLin2009cAsym' config.json`
-out_template_3=`jq -r '.MNI152NLin2009cAsym_res_2' config.json`
-out_template_4=`jq -r '.fsaverage_den_10k' config.json`
-
-out_template_1_str="T1w:res-2"
-out_template_2_str="MNI152NLin2009cAsym"
-out_template_3_str="MNI152NLin2009cAsym:res-2"
-out_template_4_str="fsaverage:den-10k"
+templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["MNI152NLin2009cAsym:res-2"], .["fsaverage:den-10k"]' config.json`)
+template_names=("T1w:res-2" "MNI152NLin2009cAsym" "MNI152NLin2009cAsym:res-2" "fsaverage:den-10k")
+outTEMPLATES="T1w"
+for i in {0..3}; do if ${templates_bool[$i]}; then outTEMPLATES=$(echo "$outTEMPLATES" "${template_names[$i]}"); fi; done
 
 #inODIR=`jq -r '.inodir' config.json`
 #inWDIR=`jq -r '.inwdir' config.json`
@@ -261,19 +256,6 @@ fi
 echo $FREESURFER_LICENSE > .license.txt
 
 ###################################################################################################
-# cat templates to be resampled to
-
-templates="T1w" # T1w is required
-for template in out_template_1 out_template_2 out_template_3 out_template_4
-    do if ${!template}
-        var_name=$(echo "${template}_str")
-        temp_name=${!var_name}
-        then templates=$(echo "${templates}" "${temp_name}")
-    fi
-done
-IFS=', ' read -r -a out_spaces <<< "$templates" 
-
-###################################################################################################
 #
 # run fmriprep!
 #
@@ -287,7 +269,7 @@ time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces ${out_spaces[@]} \
+    --output-spaces $outTEMPLATES \
     --force-bbr \
     --force-syn \
     --fs-license-file=.license.txt \

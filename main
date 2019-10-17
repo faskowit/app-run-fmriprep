@@ -39,8 +39,12 @@ inFSDIR=`jq -r '.fsin' config.json`
 # templates to be resampled to
 templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["MNI152NLin2009cAsym:res-2"], .["fsaverage:den-10k"]' config.json`)
 template_names=("T1w:res-2" "MNI152NLin2009cAsym" "MNI152NLin2009cAsym:res-2" "fsaverage:den-10k")
-outTEMPLATES="T1w"
-for i in {0..3}; do if ${templates_bool[$i]}; then outTEMPLATES=$(echo "$outTEMPLATES" "${template_names[$i]}"); fi; done
+outTEMPLATES="T1w" # T1w is required
+for i in {0..3}
+  do if ${templates_bool[$i]}; then
+    outTEMPLATES=$(echo "$outTEMPLATES" "${template_names[$i]}")
+  fi
+done
 
 #inODIR=`jq -r '.inodir' config.json`
 #inWDIR=`jq -r '.inwdir' config.json`

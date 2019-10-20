@@ -258,7 +258,6 @@ if [ $(jq .fieldmap config.json) != "null" ]; then
 fi
 
 echo $FREESURFER_LICENSE > .license.txt
-echo $FREESURFER_LICENSE > $FREESURFER_HOME/license.txt
 
 ###################################################################################################
 #
@@ -268,7 +267,7 @@ echo $FREESURFER_LICENSE > $FREESURFER_HOME/license.txt
 mkdir -p templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 
-time singularity run --cleanenv --writable docker://poldracklab/fmriprep:1.5.0 \
+time singularity run --bind $PWD:/home/fmriprep --cleanenv --writable docker://poldracklab/fmriprep:1.5.0 \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \
@@ -277,7 +276,7 @@ time singularity run --cleanenv --writable docker://poldracklab/fmriprep:1.5.0 \
     --output-spaces $outTEMPLATES \
     --force-bbr \
     --force-syn \
-    --fs-license-file=$FREESURFER_HOME/license.txt \
+    --fs-license-file=.license.txt \
     --skull-strip-template=NKI \
     --work-dir=$WORKDIRNAME \
     --participant_label=$bidsSub \

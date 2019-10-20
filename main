@@ -266,6 +266,7 @@ echo $FREESURFER_LICENSE > .license.txt
 
 mkdir -p templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
+export SINGULARITYENV_SINGULARITY_DISABLE_CACHE=True
 
 time singularity run --cleanenv docker://poldracklab/fmriprep:1.5.0 \
     --notrack \

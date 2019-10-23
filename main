@@ -268,7 +268,7 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 [ -z "$FREESURFER_LICENSE" ] && echo "Please set FREESURFER_LICENSE in .bashrc" && exit 1;
 echo $FREESURFER_LICENSE > license.txt
 
-time singularity exec -e docker://poldracklab/fmriprep:latest \
+time singularity exec -e docker://poldracklab/fmriprep:latest /usr/local/miniconda/bin/fmriprep \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \

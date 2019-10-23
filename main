@@ -267,7 +267,8 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 
 [ -z "$FREESURFER_LICENSE" ] && echo "Please set FREESURFER_LICENSE in .bashrc" && exit 1;
 echo $FREESURFER_LICENSE > license.txt
-time singularity exec -e -B `pwd`/license.txt:/opt/freesurfer/license.txt docker://poldracklab/fmriprep:1.5.0 \
+
+time singularity exec -e docker://poldracklab/fmriprep:latest \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \
@@ -276,6 +277,7 @@ time singularity exec -e -B `pwd`/license.txt:/opt/freesurfer/license.txt docker
     --output-spaces $outTEMPLATES \
     --force-bbr \
     --force-syn \
+    --fs-license-file=license.txt \
     --skull-strip-template=NKI \
     --work-dir=$WORKDIRNAME \
     --participant_label=$bidsSub \

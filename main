@@ -37,7 +37,7 @@ inFMRI=`jq -r '.fmri' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
 
 # templates to be resampled to
-templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["MNI152NLin2009cAsym:res-2"], .["fsaverage:den-10k"]' config.json`)
+templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["fsaverage:den-10k"]' config.json`)
 template_names=("T1w:res-2" "MNI152NLin2009cAsym" "fsaverage:den-10k")
 outTEMPLATES="T1w MNI152NLin2009cAsym:res-2" # T1w and MNI152NLin2009cAsym:res-2 are required
 for i in {0..2}

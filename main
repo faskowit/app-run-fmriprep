@@ -155,107 +155,232 @@ if [[ $inFMRI != "null" ]] ; then
 fi
 
 ################################################################################
+#
 # FMAP
+#
+# According to bids specification, we have to handle 4 fmap formats (5 if we include the new b0 "fieldmap"
+#
+#
 
-if [ $(jq .fieldmap config.json) != "null" ]; then
+#Case 1: Phase difference image and at least one magnitude image
+#    Template:
+#    sub-<participant_label>/[ses-<session_label>/]
+#    fmap/
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phasediff.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phasediff.json
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_magnitude1.nii[.gz]
+#
+#    (optional)
+#    sub-<participant_label>/[ses-<session_label>/]
+#    fmap/
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_magnitude2.nii[.gz]
+#    (sidecar)
+#    {
+#    "EchoTime1": 0.00600,
+#    "EchoTime2": 0.00746,
+#    "IntendedFor": "func/sub-01_task-motor_bold.nii.gz"
+#    }
+
+#Case 2: Two phase images and two magnitude images
+#    Template:
+#    sub-<participant_label>/[ses-<session_label>/]
+#    fmap/
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phase1.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phase1.json
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phase2.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_phase2.json
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_magnitude1.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_magnitude2.nii[.gz]
+#
+#    Similar to the case above, but instead of a precomputed phase difference map two separate phase images are
+#    presented. The two sidecar JSON file need to specify corresponding EchoTime values. For example:
+#    {
+#    "EchoTime": 0.00746,
+#    "IntendedFor": "func/sub-01_task-motor_bold.nii.gz"
+#    }
+
+#Case 3: A single, real fieldmap image (showing the field inhomogeneity in each voxel)
+#    Template:
+#    sub-<participant_label>/[ses-<session_label>/]
+#    fmap/
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_magnitude.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_fieldmap.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>][_run-<run_index>]_fieldmap.json
+#
+#    In some cases (for example GE) the scanner software will output a precomputed fieldmap denoting the B0
+#    inhomogeneities along with a magnitude image used for coregistration. In this case the sidecar JSON file needs to
+#    include the units of the fieldmap. The possible options are: “Hz”, “rad/s”, or “Tesla”. For example:
+#    {
+#    "Units": "rad/s",
+#    "IntendedFor": "func/sub-01_task-motor_bold.nii.gz"
+#    }
+
+#Case 4: Multiple phase encoded directions (“pepolar”)
+#    Template:
+#    sub-<participant_label>/[ses-<session_label>/]
+#    fmap/
+#    sub-<label>[_ses-<session_label>][_acq-<label>]_dir-<dir_label>[_run-<run_index>]_epi.nii[.gz]
+#    sub-<label>[_ses-<session_label>][_acq-<label>]_dir-<dir_label>[_run-<run_index>]_epi.json
+#
+#    The phase-encoding polarity (PEpolar) technique combines two or more Spin Echo EPI scans with different phase
+#    encoding directions to estimate the underlying inhomogeneity/deformation map. Examples of tools using this kind
+#    of images are FSL TOPUP, AFNI 3dqwarp and SPM . In such a case, the phase encoding direction is specified in the
+#    corresponding JSON file as one of: “i”, “j”, “k”, “i-”, “j-, “k-”. For these differentially phase encoded sequences, one also
+#    needs to specify the Total Readout Time defined as the time (in seconds) from the center of the first echo to the
+#    center of the last echo (aka “FSL definition” - see here and here how to calculate it). For example
+#    {
+#    "PhaseEncodingDirection": "j-",
+#    "TotalReadoutTime": 0.095,
+#    "IntendedFor": "func/sub-01_task-motor_bold.nii.gz"
+#    }
+#    dir_label value can be set to arbitrary alphanumeric label ([a-zA-Z0-9]+ for example “LR” or “AP”) that can help
+#    users to distinguish between different files, but should not be used to infer any scanning parameters (such as phase
+#    encoding directions) of the corresponding sequence. Please rely only on the JSON file to obtain scanning
+#    parameters. _epi files can be a 3D or 4D - in the latter case all timepoints share the same scanning parameters. To
+#    indicate which run is intended to be used with which functional or diffusion scan the IntendedFor field in the
+#    JSON file should be used.
+
+relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,func/,')
+fieldmap_path=$(jq -r .fieldmap config.json)
+fmap_in_dir=`dirname $fieldmap_path`
+fmap_bids_dir=$bidsSubSesDir/fmap
+name_FMAP=$fmap_bids_dir/$bidsSub
+name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq run" $ses )
+
+#do we really have fmap input?
+if [ -d $fmap_in_dir ]; then
+	mkdir -p $fmap_bids_dir
+
+    echo "fmap indir"
+    ls -la $fmap_in_dir
+
     jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
-	mkdir -p $bidsSubSesDir/fmap
+    #can I symlink instead?
+    [ -f $fmap_in_dir/phasediff.nii.gz ] && cp $fmap_in_dir/phasediff.nii.gz ${name_FMAP}_phasediff.nii.gz
+    if [ -f $fmap_in_dir/phasediff.json ]; then
+        cp $fmap_in_dir/phasediff.json ${name_FMAP}_phasediff.json
+        bids_phaseencode_check ${name_FMAP}_phasediff.json 
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP}_phasediff.json > ${name_FMAP}_phasediff.json.tmp
+    fi
 
-	# the fmri that the fmap is for
-	relFMRI=$(echo ${name_FMRI}_bold.nii.gz | sed 's,.*/func/,/func/,')
-    fieldmap_path=$(jq -r .fieldmap config.json) #might not exit but I am using ti find the path
-    fmapDir=`dirname $fieldmap_path`
+    [ -f $fmap_in_dir/magnitude.nii.gz ] && cp $fmap_in_dir/magnitude.nii.gz ${name_FMAP}_magnitude.nii.gz
+    [ -f $fmap_in_dir/magnitude1.nii.gz ] && cp $fmap_in_dir/magnitude1.nii.gz ${name_FMAP}_magnitude1.nii.gz
+    [ -f $fmap_in_dir/magnitude2.nii.gz ] && cp $fmap_in_dir/magnitude2.nii.gz ${name_FMAP}_magnitude2.nii.gz
 
-	# need to determine what type of fieldmap.
-	# right now, support phasediff, epi
+    [ -f $fmap_in_dir/fieldmap.nii.gz ] && cp $fmap_in_dir/fieldmap.nii.gz ${name_FMAP}_fieldmap.nii.gz
+    if [ -f $fmap_in_dir/fieldmap.json ]; then
+        cp $fmap_in_dir/fieldmap.json ${name_FMAP}_fieldmap.json
+        bids_phaseencode_check ${name_FMAP}_fieldmap.json 
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP}_fieldmap.json > ${name_FMAP}_fieldmap.json.tmp
+    fi
 
-    ############ fmap / phasediff
-    #phasediff.nii.gz/json
-    #magnitude1.nii.gz/json
-    #magnitude2.nii.gz/json
-    if [ -f $(jq -r .phasediff config.json) ] ; then
+    [ -f $fmap_in_dir/phase1.nii.gz ] && cp $fmap_in_dir/phase1.nii.gz ${name_FMAP}_phase1.nii.gz
+    if [ -f $fmap_in_dir/phase1.json ]; then
+        cp $fmap_in_dir/phase1.json ${name_FMAP}_phase1.json
+        bids_phaseencode_check ${name_FMAP}_phase1.json 
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP}_phase1.json > ${name_FMAP}_phase1.json.tmp
+    fi
 
-		name_FMAP=$bidsSubSesDir/fmap/$bidsSub
-		name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq run" $ses )
+    [ -f $fmap_in_dir/phase2.nii.gz ] && cp $fmap_in_dir/phase2.nii.gz ${name_FMAP}_phase2.nii.gz
+    if [ -f $fmap_in_dir/phase2.json ]; then
+        cp $fmap_in_dir/phase2.json ${name_FMAP}_phase2.json
+        bids_phaseencode_check ${name_FMAP}_phase2.json 
+		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP}_phase2.json > ${name_FMAP}_phase2.json.tmp
+    fi
 
-		# fmap actually has a few things associated with it, hence need to copy 
-		# over additional stuff: fmap is actually:
-		# phasediff.nii.gz, phasediff.json, 
-		# and magnitude files
+    #TODO - pull dir from epi1.json and epi2.json?
+    epi1_dir="ap"
+    epi2_dir="pa"
+    #dirval=$(bids_namekeyvals "YO" fmap.json "dir" )
+    #dirval=$(echo $dirval | sed s,YO_dir-,,)
+    #name_FMAP_1=$(echo $name_FMAP | sed s,dir-$dirval,dir-1, )
+    #name_FMAP_2=$(echo $name_FMAP | sed s,dir-$dirval,dir-2, )
 
-		rawPhaseDiff=$fmapDir/phasediff.nii.gz
-		rawMagnitudes=($(ls -v $fmapDir/*magnitude*nii.gz))
+    epi1name=${name_FMAP}_dir-${epi1_dir}_epi
+    [ -f $fmap_in_dir/epi1.nii.gz ] && cp $fmap_in_dir/epi1.nii.gz $epi1name.nii.gz
+    if [ -f $fmap_in_dir/epi1.json ]; then
+        cp $fmap_in_dir/epi1.json $epi1name.json
+        bids_phaseencode_check $epi1name.json
+		jq -r '.IntendedFor="'${relFMRI}'"' $epi1name.json > $epi1name.json.tmp
+    fi
+    [ -f $fmap_in_dir/epi2.nii.gz ] && cp $fmap_in_dir/epi2.nii.gz $epi2name_pa.nii.gz
+    if [ -f $fmap_in_dir/epi2.json ]; then
+        cp $fmap_in_dir/epi2.json $epi2name.json
+        bids_phaseencode_check $epi2name.json
+		jq -r '.IntendedFor="'${relFMRI}'"' $epi2name.json > $epi2name.json.tmp
+    fi
 
-		cp $rawPhaseDiff ${name_FMAP}_phasediff.nii.gz
-		# replacing (or setting), the intended for category
-		jq -r '.meta | .IntendedFor="'$relFMRI'"' fmap.json > ${name_FMAP}_phasediff.json
+    #convert tmp file to real file
+    for file in ${name_FMAP}*.tmp; do
+        mv $file ${file%.tmp}
+    done
 
-		for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
-			cp ${rawMagnitudes[$idx]} ${name_FMAP}_magnitude$((idx+1)).nii.gz
-            #TODO - what about _magnitue1/2.json?
-		done
-
-		bids_phaseencode_check ${name_FMAP}_phasediff.json 
-
-        ############ fmap / 2phasemag
-        #phase1.nii.gz / json
-        #phase2.nii.gz / json
-        #magnitude1.nii.gz /json
-        #magnitude2.nii.gz / json
-        #TODO..
-
-        ############ fmap / real
-        #fieldmap.nii.gz / json
-        #magnitude.nii.gz
-        #TODO.
-
-        ############ fmap / epi
-        #N.epi.nii.gz /json
-
-    elif [ -f $(jq -r .ap config.json) ] ; then
-
-		name_FMAP=$bidsSubSesDir/fmap/$bidsSub
-		name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq ce dir run" $ses )
-
-		# get just the direction value
-		dirval=$(bids_namekeyvals "YO" fmap.json "dir" )
-		dirval=$(echo $dirval | sed s,YO_dir-,,)
-
-		# now make the name for 1 and 2
-		name_FMAP_1=$(echo $name_FMAP | sed s,dir-$dirval,dir-1, )
-		name_FMAP_2=$(echo $name_FMAP | sed s,dir-$dirval,dir-2, )
-
-		imgs=($(ls $fmapDir/*epi*nii.gz ))
-		# if there aren't exactly two images read
-		if [[ ${#imgs[@]} -ne 2 ]] ; then
-			echo "did not read to images for fmap. exiting"
-			exit 1
-		fi
-
-		json1=$(echo ${imgs[0]} | sed s,nii.gz,json, )
-		json2=$(echo ${imgs[1]} | sed s,nii.gz,json, )
-
-		cp ${imgs[0]} ${name_FMAP_1}_epi.nii.gz
-		cp ${imgs[1]} ${name_FMAP_2}_epi.nii.gz
-		cp ${json1} ${name_FMAP_1}_epi.tmp.json
-		cp ${json2} ${name_FMAP_2}_epi.tmp.json
-
-		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_1}_epi.tmp.json > ${name_FMAP_1}_epi.json
-		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_2}_epi.tmp.json > ${name_FMAP_2}_epi.json
-
-		rm ${name_FMAP_1}_epi.tmp.json
-		rm ${name_FMAP_2}_epi.tmp.json
-
-		bids_phaseencode_check ${name_FMAP_1}_epi.json
-		bids_phaseencode_check ${name_FMAP_2}_epi.json
-
-	else
-		echo "problem parsing fmap. exiting"
-		exit 1
-	fi
-
+    echo "fmap bids dir"
+    ls -la $fmap_bids_dir
 fi
+
+    # fmap actually has a few things associated with it, hence need to copy 
+    # over additional stuff: fmap is actually:
+    # phasediff.nii.gz, phasediff.json, 
+    # and magnitude files
+
+    #rawPhaseDiff=$fmapDir/phasediff.nii.gz
+    #rawMagnitudes=($(ls -v $fmapDir/*magnitude*nii.gz))
+
+    #cp $rawPhaseDiff ${name_FMAP}_phasediff.nii.gz
+    # replacing (or setting), the intended for category
+    #jq -r '.meta | .IntendedFor="'$relFMRI'"' fmap.json > ${name_FMAP}_phasediff.json
+
+    #for (( idx=0 ; idx<${#rawMagnitudes[@]} ; idx++ )) ; do
+    #    cp ${rawMagnitudes[$idx]} ${name_FMAP}_magnitude$((idx+1)).nii.gz
+    #done
+
+    #bids_phaseencode_check ${name_FMAP}_phasediff.json 
+
+#    elif [ -f $(jq -r .ap config.json) ] ; then
+#
+#		name_FMAP=$bidsSubSesDir/fmap/$bidsSub
+#		name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq ce dir run" $ses )
+#
+#		# get just the direction value
+#		dirval=$(bids_namekeyvals "YO" fmap.json "dir" )
+#		dirval=$(echo $dirval | sed s,YO_dir-,,)
+#
+#		# now make the name for 1 and 2
+#		name_FMAP_1=$(echo $name_FMAP | sed s,dir-$dirval,dir-1, )
+#		name_FMAP_2=$(echo $name_FMAP | sed s,dir-$dirval,dir-2, )
+#
+#		imgs=($(ls $fmapDir/*epi*nii.gz ))
+#		# if there aren't exactly two images read
+#		if [[ ${#imgs[@]} -ne 2 ]] ; then
+#			echo "did not read to images for fmap. exiting"
+#			exit 1
+#		fi
+#
+#		json1=$(echo ${imgs[0]} | sed s,nii.gz,json, )
+#		json2=$(echo ${imgs[1]} | sed s,nii.gz,json, )
+#
+#		cp ${imgs[0]} ${name_FMAP_1}_epi.nii.gz
+#		cp ${imgs[1]} ${name_FMAP_2}_epi.nii.gz
+#		cp ${json1} ${name_FMAP_1}_epi.tmp.json
+#		cp ${json2} ${name_FMAP_2}_epi.tmp.json
+#
+#		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_1}_epi.tmp.json > ${name_FMAP_1}_epi.json
+#		jq -r '.IntendedFor="'${relFMRI}'"' ${name_FMAP_2}_epi.tmp.json > ${name_FMAP_2}_epi.json
+#
+#		rm ${name_FMAP_1}_epi.tmp.json
+#		rm ${name_FMAP_2}_epi.tmp.json
+#
+#		bids_phaseencode_check ${name_FMAP_1}_epi.json
+#		bids_phaseencode_check ${name_FMAP_2}_epi.json
+#
+#	else
+#		echo "problem parsing fmap. exiting"
+#		exit 1
+#	fi
+#
+#fi
 
 ###################################################################################################
 #

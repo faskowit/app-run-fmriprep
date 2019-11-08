@@ -401,7 +401,7 @@ time singularity exec -e docker://poldracklab/fmriprep:1.5.1rc2 /usr/local/minic
     --use-plugin=multi_proc.yml \
     --output-spaces $outTEMPLATES \
     --force-bbr \
-    --force-syn \
+    --use-syn-sdc \
     --fs-license-file=license.txt \
     --skull-strip-template=NKI \
     --work-dir=$WORKDIRNAME \

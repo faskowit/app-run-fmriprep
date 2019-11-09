@@ -37,25 +37,46 @@ inFMRI=`jq -r '.fmri' config.json`
 inFSDIR=`jq -r '.fsin' config.json`
 
 # templates to be resampled to
-templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["fsaverage:den-10k"]' config.json`)
-template_names=("T1w:res-2" "MNI152NLin2009cAsym" "fsaverage:den-10k")
-outTEMPLATES="T1w MNI152NLin2009cAsym:res-2" # T1w and MNI152NLin2009cAsym:res-2 are required
-for i in {0..2}
-  do if ${templates_bool[$i]}; then
-    outTEMPLATES=$(echo "$outTEMPLATES" "${template_names[$i]}")
-  fi
-done
+#templates_bool=(`jq -r '.["T1w:res-2"], .["MNI152NLin2009cAsym"], .["fsaverage:den-10k"]' config.json`)
+#template_names=("T1w:res-2" "MNI152NLin2009cAsym" "fsaverage:den-10k")
+#outTEMPLATES="T1w MNI152NLin2009cAsym:res-2" # T1w and MNI152NLin2009cAsym:res-2 are required
+#for i in {0..2}
+#  do if ${templates_bool[$i]}; then
+#    outTEMPLATES=$(echo "$outTEMPLATES" "${template_names[$i]}")
+#  fi
+#done
 
-#inODIR=`jq -r '.inodir' config.json`
-#inWDIR=`jq -r '.inwdir' config.json`
+#https://fmriprep.readthedocs.io/en/stable/usage.html
+#Standard and non-standard spaces to resample anatomical and functional images to. 
+#Standard spaces may be specified by the form <TEMPLATE>[:res-<resolution>][:cohort-<label>][...], 
+#   where <TEMPLATE> is a keyword (valid keywords: 
+#   “MNI152Lin”, 
+#   “MNI152NLin2009cAsym”, 
+#   “MNI152NLin6Asym”, 
+#   “MNI152NLin6Sym”, 
+#   “MNIInfant”, 
+#   “MNIPediatricAsym”, 
+#   “NKI”, 
+#   “OASIS30ANTs”, 
+#   “PNC”, 
+#   “fsLR”, 
+#   “fsaverage”
+#) or path pointing to a user-supplied template, and may be followed by optional, colon-separated parameters. 
+#Non-standard spaces (valid keywords: 
+#   anat, 
+#   T1w, 
+#   run, 
+#   func, 
+#   sbref, 
+#   fsnative) 
+#imply specific orientations and sampling grids. Important to note, the res-* modifier does not define the resolution used for the spatial normalization. For further details, please check out https://fmriprep.readthedocs.io/en/1.5.0/spaces.html
 
-#debug
-#hostname
-#vmstat
-#cat /proc/sys/vm/overcommit_memory
-#cat /proc/sys/vm/overcommit_ratio
-#cat /proc/sys/vm/swappiness
-#cat /proc/meminfo
+spaces=""
+$(jq -r .space_t1w config.json) && spaces="$spaces T1w"
+$(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
+$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
+$(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
+$(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
 
 # some logical checks
 if [[ $inT1w = "null" ]] || [[ $inFMRI = "null" ]] ; then
@@ -400,7 +421,7 @@ time singularity exec -e docker://poldracklab/fmriprep:1.5.1rc2 /usr/local/minic
     --skip_bids_validation \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces $outTEMPLATES \
+    --output-spaces $spaces \
     --force-bbr \
     --use-syn-sdc \
     --fs-license-file=license.txt \

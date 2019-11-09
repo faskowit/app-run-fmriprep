@@ -25,7 +25,7 @@ cat config.json | jq '._inputs[].meta.subject="TTTEMPSUB"' > tmp1.json
 cat tmp1.json | jq '._inputs[].meta.session="SSSES"' > tmp2.json
 cat tmp2.json | jq '._inputs[].meta.run="1"' > tmp3.json
 
-mv tmp3.json config.json && rm tmp?.json
+mv tmp3.json config.json 
 
 ################################################################################
 # read input from config.json
@@ -182,6 +182,7 @@ fi
 #    }
 
 #Case 2: Two phase images and two magnitude images
+#(fmriprep doesn't support 2phasemag https://github.com/poldracklab/fmriprep/issues/1655)
 #    Template:
 #    sub-<participant_label>/[ses-<session_label>/]
 #    fmap/
@@ -248,7 +249,7 @@ name_FMAP=$fmap_bids_dir/$bidsSub
 name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq run" $ses )
 
 #do we really have fmap input?
-if [ -d $fmap_in_dir ]; then
+if [ $fieldmap_path != "null" ]; then
 	mkdir -p $fmap_bids_dir
 
     echo "fmap indir"

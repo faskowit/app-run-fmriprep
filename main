@@ -416,7 +416,7 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 echo $FREESURFER_LICENSE > license.txt
 
 time singularity exec \
-    -e -B run.py:/usr/local/miniconda/lib/python3.7/site-packages/fmriprep/cli/run.py \
+    -e -B $(pwd)/run.py:/usr/local/miniconda/lib/python3.7/site-packages/fmriprep/cli/run.py \
     docker://poldracklab/fmriprep:1.5.1rc2 /usr/local/miniconda/bin/fmriprep \
     --notrack \
     --resource-monitor \

@@ -421,7 +421,7 @@ time singularity exec \
     --notrack \
     --resource-monitor \
     --skip_bids_validation \
-    --skip_citation \
+    --skip_citation_process \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
     --output-spaces $spaces \

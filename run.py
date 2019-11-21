@@ -23,7 +23,6 @@ logging.addLevelName(25, 'IMPORTANT')  # Add a new level between INFO and WARNIN
 logging.addLevelName(15, 'VERBOSE')  # Add a new level between INFO and DEBUG
 logger = logging.getLogger('cli')
 
-print('running patched version of fmriprep run.py - for skip citation')
 
 def _warn_redirect(message, category, filename, lineno, file=None, line=None):
     logger.warning('Captured warning (%s): %s', category, message)
@@ -74,9 +73,9 @@ def get_parser():
     g_bids.add_argument('--skip_bids_validation', '--skip-bids-validation', action='store_true',
                         default=False,
                         help='assume the input dataset is BIDS compliant and skip the validation')
-    g_bids.add_argument('--skip_citation', '--skip-citation', action='store_true',
+    g_bids.add_argument('--skip_citation_process', '--skip-citation-process', action='store_true',
                         default=False,
-                        help='skip generation of HTML and LaTeX formatted citation with pandoc')
+                        help='skip processing HTML and LaTeX formatted citation with pandoc')
     g_bids.add_argument('--participant_label', '--participant-label', action='store', nargs='+',
                         help='a space delimited list of participant identifiers or a single '
                              'identifier (the sub- prefix can be removed)')
@@ -448,7 +447,7 @@ license file at several paths, in this order: 1) command line argument ``--fs-li
             for ext in ('bib', 'tex', 'md', 'html')
         }
 
-        if not opts.skip_citation and citation_files['md'].exists():
+        if not opts.skip_citation_process and citation_files['md'].exists():
             # Generate HTML file resolving citations
             cmd = ['pandoc', '-s', '--bibliography',
                    pkgrf('fmriprep', 'data/boilerplate.bib'),
@@ -539,6 +538,13 @@ def build_workflow(opts, retval):
             'The selected output folder is the same as the input BIDS folder. '
             'Please modify the output path (suggestion: %s).',
             bids_dir / 'derivatives' / ('fmriprep-%s' % __version__.split('+')[0]))
+        retval['return_code'] = 1
+        return retval
+
+    if bids_dir in work_dir.parents:
+        build_log.error(
+            'The selected working directory is a subdirectory of the input BIDS folder. '
+            'Please modify the output path.')
         retval['return_code'] = 1
         return retval
 
@@ -781,4 +787,3 @@ The configuration value will be applied to ALL output standard spaces.""")
 if __name__ == '__main__':
     raise RuntimeError("fmriprep/cli/run.py should not be run directly;\n"
                        "Please `pip install` fmriprep and use the `fmriprep` command")
-

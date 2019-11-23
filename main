@@ -420,8 +420,8 @@ time singularity exec \
     docker://poldracklab/fmriprep:1.5.1rc2 /usr/local/miniconda/bin/fmriprep \
     --notrack \
     --resource-monitor \
-    --skip_bids_validation \
-    --skip_citation_process \
+    --skip-bids-validation \
+    --skip-citation-process \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
     --output-spaces $spaces \

@@ -421,7 +421,6 @@ time singularity exec \
     --notrack \
     --resource-monitor \
     --skip-bids-validation \
-    --skip-citation-process \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
     --output-spaces $spaces \
@@ -432,6 +431,7 @@ time singularity exec \
     --work-dir=$WORKDIRNAME \
     --participant_label=$bidsSub \
     $bidsDir $outdir participant
+#--skip-citation-process \
 
 #--template-resampling-grid=2mm \
 

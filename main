@@ -432,9 +432,6 @@ time singularity exec \
     --work-dir=$WORKDIRNAME \
     --participant_label=$bidsSub \
     $bidsDir $outdir participant
-#--skip-citation-process \
-
-#--template-resampling-grid=2mm \
 
 echo "done with fmriprep! - now organizing output"
 

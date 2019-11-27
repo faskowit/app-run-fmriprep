@@ -108,7 +108,7 @@ def get_parser():
                          help='DEPRECATED (now does nothing, see --error-on-aroma-warnings) '
                               '- ignores the errors ICA_AROMA returns when there are no '
                               'components classified as either noise or signal')
-    g_perfm.add_argument('--skip-citation-process', action='store_true', 
+    g_perfm.add_argument('--md-only-boilerplate', action='store_true',
                          default=False,
                          help='skip generation of HTML and LaTeX formatted citation with pandoc')
     g_perfm.add_argument('--error-on-aroma-warnings', action='store_true',
@@ -447,7 +447,7 @@ license file at several paths, in this order: 1) command line argument ``--fs-li
             for ext in ('bib', 'tex', 'md', 'html')
         }
 
-        if not opts.skip_citation_process and citation_files['md'].exists():
+        if not opts.md_only_boilerplate and citation_files['md'].exists():
             # Generate HTML file resolving citations
             cmd = ['pandoc', '-s', '--bibliography',
                    pkgrf('fmriprep', 'data/boilerplate.bib'),

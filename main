@@ -421,6 +421,7 @@ time singularity exec \
     --notrack \
     --resource-monitor \
     --skip-bids-validation \
+    --md-only-boilerplate \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
     --output-spaces $spaces \

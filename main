@@ -70,10 +70,11 @@ inFSDIR=`jq -r '.fsin' config.json`
 #   fsnative) 
 #imply specific orientations and sampling grids. Important to note, the res-* modifier does not define the resolution used for the spatial normalization. For further details, please check out https://fmriprep.readthedocs.io/en/1.5.0/spaces.html
 
+#https://github.com/templateflow/templateflow
 spaces=""
-$(jq -r .space_t1w config.json) && spaces="$spaces T1w"
+#$(jq -r .space_t1w config.json) && spaces="$spaces T1w"
+#$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
 $(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
-$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
 $(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
 $(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
 

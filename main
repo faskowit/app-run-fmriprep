@@ -17,7 +17,6 @@ source bids_funcs.sh
 WORKDIRNAME=fmripworkdir
 outdir=fmripout
 INDIRNAME=fmripinput
-DERIVOUTNAME=output
 
 # manually change "subject" in config.json to "TTTEMPSUB" to work with fMRIPrep
 
@@ -417,7 +416,8 @@ echo $FREESURFER_LICENSE > license.txt
 
 time singularity exec \
     -e -B $(pwd)/run.py:/usr/local/miniconda/lib/python3.7/site-packages/fmriprep/cli/run.py \
-    docker://poldracklab/fmriprep:1.5.1rc2 /usr/local/miniconda/bin/fmriprep \
+    docker://poldracklab/fmriprep:1.5.2 \
+    /usr/local/miniconda/bin/fmriprep \
     --notrack \
     --resource-monitor \
     --skip-bids-validation \
@@ -435,10 +435,10 @@ time singularity exec \
 
 echo "done with fmriprep! - now organizing output"
 
-# lets copy specifics out of the workdir
-bloDir=$DERIVOUTNAME
 
 #####################################################################################
+#
+# reorganize output
 #
 
 # get basename
@@ -448,22 +448,18 @@ outBase="$oDirFunc/$(basename $(echo $inFMRI | sed s,_bold.nii.gz,, ))"
 
 # get the preproc fmri vol
 tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
-mkdir -p ${bloDir}_bold
-cp -v $tmp ${bloDir}_bold/bold.nii.gz
+mkdir -p output_bold
+cp -v $tmp output_bold/bold.nii.gz
 
 # get the preproc fmri volmask
 tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
-mkdir ${bloDir}_boldmask
-cp -v $tmp ${bloDir}_boldmask/mask.nii.gz
+mkdir -p output_boldmask
+cp -v $tmp output_boldmask/mask.nii.gz
 
 # get the confounds
 tmp=${outBase}_desc-confounds_regressors.tsv
-mkdir -p ${bloDir}_regress
-cp -v $tmp ${bloDir}_regress/regressors.tsv
-
-#####################################################################################
-#
-# ANAT STUFF
+mkdir -p output_regress
+cp -v $tmp output_regress/regressors.tsv
 
 #inT1w=${name_T1w}_T1w.nii.gz
 oDirAnat=$outdir/fmriprep/$bidsSub/anat/
@@ -471,12 +467,17 @@ outBase=$oDirAnat/$bidsSub
 
 # get the preproc fmri vol
 tmp=${outBase}_desc-preproc_T1w.nii.gz
-mkdir -p ${bloDir}_t1/
-cp -v $tmp ${bloDir}_t1/t1.nii.gz
+mkdir -p output_t1
+cp -v $tmp output_t1/t1.nii.gz
 
 tmp=${outBase}_desc-brain_mask.nii.gz
-mkdir -p ${bloDir}_t1mask/
-cp -v $tmp ${bloDir}_t1mask/mask.nii.gz
+mkdir -p output_t1mask
+cp -v $tmp output_t1mask/mask.nii.gz
+
+mkdir output_report
+cp $outdir/fmriprep/${bidsSub}.html output_report
+cp -r $outdir/fmriprep/${bidsSub}/figures output_report
+cp -r $outdir/fmriprep/${bidsSub}/ses-${ses}/figures output_report/figures/ses-${ses}
 
 # save lots of space
 rm -r $WORKDIRNAME

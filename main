@@ -72,7 +72,7 @@ inFSDIR=`jq -r '.fsin' config.json`
 
 #https://github.com/templateflow/templateflow
 spaces=""
-$(jq -r .space_t1w config.json) && spaces="$spaces anat"
+#$(jq -r .space_t1w config.json) && spaces="$spaces anat"
 #$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
 $(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
 #$(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
@@ -426,6 +426,7 @@ time singularity exec \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
     --output-spaces $spaces \
+    --output-space T1w \
     --force-bbr \
     --use-syn-sdc \
     --fs-license-file=license.txt \

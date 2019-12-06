@@ -466,11 +466,11 @@ mkdir -p output_boldmask
 cp -v $tmp output_boldmask/mask.nii.gz
 
 # MNI-res2 space
-tmp=${outBase}_space-MNI152NLin2009cAsym:res-2_desc-preproc_bold.nii.gz
+tmp=${outBase}_space-MNI152NLin2009cAsym_res-02_desc-preproc_bold.nii.gz
 mkdir -p output_boldMNI
 cp -v $tmp output_boldMNI/bold.nii.gz
 # get the preproc fmri volmask
-tmp=${outBase}_space-MNI152NLin2009cAsym:res-2_desc-brain_mask.nii.gz
+tmp=${outBase}_space-MNI152NLin2009cAsym_res-02_desc-brain_mask.nii.gz
 mkdir -p output_boldmaskMNI
 cp -v $tmp output_boldmaskMNI/mask.nii.gz
 

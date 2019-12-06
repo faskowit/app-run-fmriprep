@@ -9,7 +9,7 @@ set -e
 #this can't prevent the fmriprep/nipype bootup vmem spiking (could kill the job)
 cat <<EOF > multi_proc.yml
 plugin: LegacyMultiProc
-plugin_args: {maxtasksperchild: 1, memory_gb: 28, n_procs: 8, raise_insufficient: false}
+plugin_args: {maxtasksperchild: 1, memory_gb: 14, n_procs: 8, raise_insufficient: false}
 EOF
 
 source bids_funcs.sh
@@ -74,9 +74,12 @@ inFSDIR=`jq -r '.fsin' config.json`
 spaces=""
 #$(jq -r .space_t1w config.json) && spaces="$spaces anat"
 #$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
-$(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
+#$(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
 #$(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
-$(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
+#$(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
+
+# manually set spaces!
+spaces="MNI152NLin2009cAsym:res-2 fsaverage5"
 
 # some logical checks
 if [[ $inT1w = "null" ]] || [[ $inFMRI = "null" ]] ; then
@@ -437,7 +440,6 @@ time singularity exec \
 
 echo "done with fmriprep! - now organizing output"
 
-
 #####################################################################################
 #
 # reorganize output
@@ -453,26 +455,33 @@ outBase="$oDirFunc/$(basename $(echo $inFMRI | sed s,_bold.nii.gz,, ))"
 # first of all, get the confounds
 tmp=${outBase}_desc-confounds_regressors.tsv
 mkdir -p output_regress
-cp -v $tmp output_regress/regressors.tsv
+mv -v $tmp output_regress/regressors.tsv
 
 # T1w space
 # get the preproc fmri vol
 tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
 mkdir -p output_bold
-cp -v $tmp output_bold/bold.nii.gz
+mv -v $tmp output_bold/bold.nii.gz
 # get the preproc fmri volmask
 tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
 mkdir -p output_boldmask
-cp -v $tmp output_boldmask/mask.nii.gz
+mv -v $tmp output_boldmask/mask.nii.gz
 
 # MNI-res2 space
-tmp=${outBase}_space-MNI152NLin2009cAsym_res-02_desc-preproc_bold.nii.gz
+tmp=${outBase}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
 mkdir -p output_boldMNI
-cp -v $tmp output_boldMNI/bold.nii.gz
+mv -v $tmp output_boldMNI/bold.nii.gz
 # get the preproc fmri volmask
-tmp=${outBase}_space-MNI152NLin2009cAsym_res-02_desc-brain_mask.nii.gz
+tmp=${outBase}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz
 mkdir -p output_boldmaskMNI
-cp -v $tmp output_boldmaskMNI/mask.nii.gz
+mv -v $tmp output_boldmaskMNI/mask.nii.gz
+
+# fsaverage (for the future)
+mkdir -p output_boldfsaverage
+tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
+mv -v $tmp output_boldMNI/bold-L.func.gii
+tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
+mv -v $tmp output_boldMNI/bold-R.func.gii
 
 ### T1w outputs ###
 
@@ -483,11 +492,11 @@ outBase=$oDirAnat/$bidsSub
 # get the preproc t1w vol
 tmp=${outBase}_desc-preproc_T1w.nii.gz
 mkdir -p output_t1
-cp -v $tmp output_t1/t1.nii.gz
+mv -v $tmp output_t1/t1.nii.gz
 
 tmp=${outBase}_desc-brain_mask.nii.gz
 mkdir -p output_t1mask
-cp -v $tmp output_t1mask/mask.nii.gz
+mv -v $tmp output_t1mask/mask.nii.gz
 
 mkdir output_report
 cp $outdir/fmriprep/${bidsSub}.html output_report

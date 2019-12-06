@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=6:00:00,vmem=12gb
+#PBS -l nodes=1:ppn=8,walltime=6:00:00,vmem=14gb
 #PBS -N fmriprep
 
 set -x
@@ -72,10 +72,10 @@ inFSDIR=`jq -r '.fsin' config.json`
 
 #https://github.com/templateflow/templateflow
 spaces=""
-#$(jq -r .space_t1w config.json) && spaces="$spaces T1w"
+$(jq -r .space_t1w config.json) && spaces="$spaces T1w"
 #$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
 $(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
-$(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
+#$(jq -r .space_mni152_2009c config.json) && spaces="$spaces MNI152NLin2009cAsym"
 $(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
 
 # some logical checks
@@ -442,31 +442,44 @@ echo "done with fmriprep! - now organizing output"
 # reorganize output
 #
 
+### bold outputs ###
+
 # get basename
 inFMRI=${name_FMRI}_bold.nii.gz
 oDirFunc=$outdir/fmriprep/$bidsSub/ses-${ses}/func/
 outBase="$oDirFunc/$(basename $(echo $inFMRI | sed s,_bold.nii.gz,, ))"
 
+# first of all, get the confounds
+tmp=${outBase}_desc-confounds_regressors.tsv
+mkdir -p output_regress
+cp -v $tmp output_regress/regressors.tsv
+
+# T1w space
 # get the preproc fmri vol
 tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
 mkdir -p output_bold
 cp -v $tmp output_bold/bold.nii.gz
-
 # get the preproc fmri volmask
 tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
 mkdir -p output_boldmask
 cp -v $tmp output_boldmask/mask.nii.gz
 
-# get the confounds
-tmp=${outBase}_desc-confounds_regressors.tsv
-mkdir -p output_regress
-cp -v $tmp output_regress/regressors.tsv
+# MNI-res2 space
+tmp=${outBase}_space-MNI152NLin2009cAsym:res-2_desc-preproc_bold.nii.gz
+mkdir -p output_boldMNI
+cp -v $tmp output_boldMNI/bold.nii.gz
+# get the preproc fmri volmask
+tmp=${outBase}_space-MNI152NLin2009cAsym:res-2_desc-brain_mask.nii.gz
+mkdir -p output_boldmaskMNI
+cp -v $tmp output_boldmaskMNI/mask.nii.gz
+
+### T1w outputs ###
 
 #inT1w=${name_T1w}_T1w.nii.gz
 oDirAnat=$outdir/fmriprep/$bidsSub/anat/
 outBase=$oDirAnat/$bidsSub
 
-# get the preproc fmri vol
+# get the preproc t1w vol
 tmp=${outBase}_desc-preproc_T1w.nii.gz
 mkdir -p output_t1
 cp -v $tmp output_t1/t1.nii.gz

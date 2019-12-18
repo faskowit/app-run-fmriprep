@@ -497,7 +497,8 @@ mv -v $tmp output_t1mask/mask.nii.gz
 
 mkdir -p output_report
 html=$(cd $outdir && find ./ -name "*.html")
-cp $outdir/$html output_report/$(dirname $html)
+mkdir -p output_report/$(dirname $html)
+cp $outdir/$html output_report/$html
 for dir in $(cd $outdir && find ./ -name figures); do
     mkdir -p output_report/$(dirname $dir)
     cp -r $outdir/$dir output_report/$(dirname $dir)

@@ -71,7 +71,7 @@ inFSDIR=`jq -r '.fsin' config.json`
 #imply specific orientations and sampling grids. Important to note, the res-* modifier does not define the resolution used for the spatial normalization. For further details, please check out https://fmriprep.readthedocs.io/en/1.5.0/spaces.html
 
 #https://github.com/templateflow/templateflow
-spaces=""
+#spaces=""
 #$(jq -r .space_t1w config.json) && spaces="$spaces anat"
 #$(jq -r .space_t1w_res2 config.json) && spaces="$spaces T1w:res-2"
 #$(jq -r .space_mni152_res2 config.json) && spaces="$spaces MNI152NLin2009cAsym:res-2"
@@ -79,7 +79,7 @@ spaces=""
 #$(jq -r .space_fsaverage_den10k config.json) && spaces="$spaces fsaverage:den-10k"
 
 # manually set spaces!
-spaces="MNI152NLin2009cAsym:res-2 fsaverage5"
+#spaces="MNI152NLin2009cAsym:res-2 fsaverage5"
 
 # some logical checks
 if [[ $inT1w = "null" ]] || [[ $inFMRI = "null" ]] ; then
@@ -415,6 +415,12 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 [ -z "$FREESURFER_LICENSE" ] && echo "Please set FREESURFER_LICENSE in .bashrc" && exit 1;
 echo $FREESURFER_LICENSE > license.txt
 
+space_optkey="--output-spaces"
+#some template can only be specified via deprecated cli option
+if [ $space == "T1w" ] || [ $space == "fsaverage" ] ; then
+    space_optkey="--output-space"
+fi
+
 time singularity exec \
     -e -B $(pwd)/run.py:/usr/local/miniconda/lib/python3.7/site-packages/fmriprep/cli/run.py \
     docker://poldracklab/fmriprep:1.5.2 \
@@ -425,8 +431,7 @@ time singularity exec \
     --md-only-boilerplate \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    --output-spaces $spaces \
-    --output-space T1w \
+    $space_optkey $(jq -r .space config.json) \
     --force-bbr \
     --use-syn-sdc \
     --fs-license-file=license.txt \
@@ -456,29 +461,31 @@ mv -v $tmp output_regress/regressors.tsv
 
 # T1w space
 # get the preproc fmri vol
-tmp=${outBase}_space-T1w_desc-preproc_bold.nii.gz
+tmp=${outBase}_space-${space}_desc-preproc_bold.nii.gz
 mkdir -p output_bold
 mv -v $tmp output_bold/bold.nii.gz
+
 # get the preproc fmri volmask
-tmp=${outBase}_space-T1w_desc-brain_mask.nii.gz
+tmp=${outBase}_space-${space}_desc-brain_mask.nii.gz
 mkdir -p output_boldmask
 mv -v $tmp output_boldmask/mask.nii.gz
 
 # MNI-res2 space
-tmp=${outBase}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-mkdir -p output_boldMNI
-mv -v $tmp output_boldMNI/bold.nii.gz
+#tmp=${outBase}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
+#mkdir -p output_boldMNI
+#mv -v $tmp output_boldMNI/bold.nii.gz
+
 # get the preproc fmri volmask
-tmp=${outBase}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz
-mkdir -p output_boldmaskMNI
-mv -v $tmp output_boldmaskMNI/mask.nii.gz
+#tmp=${outBase}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz
+#mkdir -p output_boldmaskMNI
+#mv -v $tmp output_boldmaskMNI/mask.nii.gz
 
 # fsaverage (for the future)
-mkdir -p output_boldfsaverage
-tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
-mv -v $tmp output_boldMNI/bold-L.func.gii
-tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
-mv -v $tmp output_boldMNI/bold-R.func.gii
+#mkdir -p output_boldfsaverage
+#tmp=${outBase}_space-fsaverage5_hemi-L.func.gii
+#mv -v $tmp output_boldMNI/bold-L.func.gii
+#tmp=${outBase}_space-fsaverage5_hemi-R.func.gii
+#mv -v $tmp output_boldMNI/bold-R.func.gii
 
 ### T1w outputs ###
 
@@ -504,7 +511,23 @@ for dir in $(cd $outdir && find ./ -name figures); do
     cp -r $outdir/$dir output_report/$(dirname $dir)
 done
 
-# save lots of space
-rm -r $WORKDIRNAME
+cat << EOF > product.json
+{
+    "output_bold": {
+        "tags": [ "space-$space" ]
+    },
+
+    "brainlife": [
+        {
+            "type": "html",
+            "name": "fmriprep report (todo)",
+            "path": "output_report"
+        }
+    ]
+}
+EOF
+
+# save lots of space (now that we aren't capturing raw output, I don't think this is necessary)
+#rm -r $WORKDIRNAME
 
 echo "all done"

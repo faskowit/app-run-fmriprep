@@ -124,9 +124,9 @@ if [[ $inFSDIR != "null" ]] ; then
 
 	# dont know if dir will be just inFSDIR or inFSDIR/output
 	if [[ -d $inFSDIR/output ]] ; then
-		cp -rv $inFSDIR/output $outdir/freesurfer/$bidsSub
+		cp -r $inFSDIR/output $outdir/freesurfer/$bidsSub
 	else
-		cp -rv $inFSDIR $outdir/freesurfer/$bidsSub
+		cp -r $inFSDIR $outdir/freesurfer/$bidsSub
 	fi
 fi
 
@@ -275,9 +275,6 @@ name_FMAP=$(bids_namekeyvals $name_FMAP fmap.json "acq run" $ses )
 #do we really have fmap input?
 if [ $fieldmap_path != "null" ]; then
 	mkdir -p $fmap_bids_dir
-
-    echo "fmap indir"
-    ls -la $fmap_in_dir
 
     jq '._inputs[] | select(.id == "fmap")' config.json > fmap.json
 
@@ -498,10 +495,13 @@ tmp=${outBase}_desc-brain_mask.nii.gz
 mkdir -p output_t1mask
 mv -v $tmp output_t1mask/mask.nii.gz
 
-mkdir output_report
-cp $outdir/fmriprep/${bidsSub}.html output_report
-cp -r $outdir/fmriprep/${bidsSub}/figures output_report
-cp -r $outdir/fmriprep/${bidsSub}/ses-${ses}/figures output_report/figures/ses-${ses}
+mkdir -p output_report
+html=$(cd $outdir && find ./ -name "*.html")
+cp $outdir/$html output_report/$(dirname $html)
+for dir in $(cd $outdir && find ./ -name figures); do
+    mkdir -p output_report/$(dirname $dir)
+    cp -r $outdir/$dir output_report/$(dirname $dir)
+done
 
 # save lots of space
 rm -r $WORKDIRNAME

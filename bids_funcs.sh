@@ -3,25 +3,6 @@
 #set -e
 #set -x
 
-function checkisfile {
-
-	inFile=$1
-	if [[ ! -f ${inFile} ]] ; then
-		echo "file does not exist: $inFile"
-		exit 1
-	fi
-}
-
-function checkisdir {
-
-	inDir=$1
-	if [[ ! -d ${inDir} ]] ; then
-		echo "file does not exist: $inFile"
-		exit 1
-	fi
-}
-
-
 function bids_phaseencode_check {
 	# check that any x,y,z direction is replaced with i,j,k
 

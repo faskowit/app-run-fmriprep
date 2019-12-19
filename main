@@ -415,10 +415,17 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=$PWD/templateflow
 [ -z "$FREESURFER_LICENSE" ] && echo "Please set FREESURFER_LICENSE in .bashrc" && exit 1;
 echo $FREESURFER_LICENSE > license.txt
 
+space=$(jq -r .space config.json)
 space_optkey="--output-spaces"
 #some template can only be specified via deprecated cli option
 if [ $space == "T1w" ] || [ $space == "fsaverage" ] ; then
     space_optkey="--output-space"
+fi
+
+output_space=$space
+resolution=$(jq -r .resolution config.json)
+if [ $resolution != "original" ];then
+    output_space=$space:$resolution
 fi
 
 time singularity exec \
@@ -431,7 +438,7 @@ time singularity exec \
     --md-only-boilerplate \
     --stop-on-first-crash \
     --use-plugin=multi_proc.yml \
-    $space_optkey $(jq -r .space config.json) \
+    $space_optkey $output_space \
     --force-bbr \
     --use-syn-sdc \
     --fs-license-file=license.txt \
